@@ -1,0 +1,87 @@
+.muted { color: var(--vscode-descriptionForeground); }
+.pad { padding: 6px 10px; margin: 0; }
+
+.log { display: grid; grid-template-columns: 230px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; }
+.log.no-branches { grid-template-columns: minmax(0, 1fr); }
+main { display: grid; grid-template-rows: auto auto minmax(0, 3fr) minmax(0, 2fr); min-width: 0; min-height: 0; }
+.log:not(.no-branches) main { grid-template-rows: auto minmax(0, 3fr) minmax(0, 2fr); }
+
+/* Branch list */
+.branches { display: flex; flex-direction: column; gap: 6px; min-height: 0; padding: 8px; border-right: 1px solid var(--vscode-panel-border); background: var(--vscode-sideBar-background); }
+.branches header { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+.branches header .muted { font-weight: normal; font-size: 0.9em; }
+.branches ul { flex: 1; min-height: 0; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.branches label { display: flex; gap: 6px; align-items: center; padding: 2px 4px; cursor: pointer; }
+.branches label:hover { background: var(--vscode-list-hoverBackground); }
+.branches .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.branches .current .name { font-weight: 600; }
+.branches .merged .name { opacity: 0.55; }
+.branches .empty { padding: 4px; }
+.branches input[type='checkbox'] { margin: 0; accent-color: var(--vscode-button-background); }
+.branches .only-current { align-self: flex-start; padding: 1px 8px; }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+.toolbar input { flex: 1; }
+.toolbar .count { white-space: nowrap; }
+.graph-state { white-space: nowrap; color: var(--vscode-descriptionForeground); }
+.graph-state.off { color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground)); }
+.graph-state button { padding: 0 4px; line-height: 16px; }
+
+/* Commit table */
+.table { display: flex; flex-direction: column; min-height: 0; }
+.table .empty { padding: 10px; }
+.rows { flex: 1; min-height: 0; overflow-y: auto; outline-offset: -1px; }
+.row { display: grid; align-items: center; height: 24px; padding-right: 8px; column-gap: 8px; cursor: default; white-space: nowrap; }
+.row > span { overflow: hidden; text-overflow: ellipsis; }
+.row.head { height: 22px; font-weight: 600; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border); }
+.rows .row:hover { background: var(--vscode-list-hoverBackground); }
+.rows .row.selected { color: var(--vscode-list-inactiveSelectionForeground, inherit); background: var(--vscode-list-inactiveSelectionBackground); }
+.rows:focus .row.selected { color: var(--vscode-list-activeSelectionForeground); background: var(--vscode-list-activeSelectionBackground); }
+.row .author, .row .date { color: var(--vscode-descriptionForeground); }
+.rows:focus .row.selected .author, .rows:focus .row.selected .date { color: inherit; }
+.row .date { font-variant-numeric: tabular-nums; }
+.row .uncommitted { font-style: italic; }
+
+.ref { display: inline-block; margin-right: 6px; padding: 0 5px; border: 1px solid var(--vscode-badge-background); border-radius: 3px; font-size: 0.85em; line-height: 16px; }
+.ref.head { color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); font-weight: 600; }
+.ref.tag { border-style: dashed; border-color: var(--vscode-charts-yellow); }
+
+/* Graph */
+.graph { display: block; overflow: hidden; }
+.lane { fill: none; stroke-width: 1.5; }
+.dot { stroke: var(--vscode-editor-background); stroke-width: 1; }
+.dot.hollow { fill: var(--vscode-editor-background); stroke: var(--vscode-foreground); stroke-width: 1.5; }
+.lane.c0 { stroke: var(--vscode-charts-blue); }    .dot.c0 { fill: var(--vscode-charts-blue); }
+.lane.c1 { stroke: var(--vscode-charts-green); }   .dot.c1 { fill: var(--vscode-charts-green); }
+.lane.c2 { stroke: var(--vscode-charts-orange); }  .dot.c2 { fill: var(--vscode-charts-orange); }
+.lane.c3 { stroke: var(--vscode-charts-purple); }  .dot.c3 { fill: var(--vscode-charts-purple); }
+.lane.c4 { stroke: var(--vscode-charts-red); }     .dot.c4 { fill: var(--vscode-charts-red); }
+.lane.c5 { stroke: var(--vscode-charts-yellow); }  .dot.c5 { fill: var(--vscode-charts-yellow); }
+
+/* Detail area */
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; border-top: 1px solid var(--vscode-panel-border); }
+.detail.single { grid-template-columns: minmax(0, 1fr); }
+.detail > div { min-height: 0; padding: 8px 10px; overflow: auto; }
+.detail .changed { border-left: 1px solid var(--vscode-panel-border); }
+.detail.single .changed { border-left: 0; }
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 8px; }
+.detail dt { color: var(--vscode-descriptionForeground); }
+.detail dd { margin: 0; user-select: text; overflow-wrap: anywhere; }
+.detail .hash, .detail .body { font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); }
+.detail .body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.detail h2 { margin: 0 0 6px; font-size: 1em; font-weight: 600; }
+.detail h2 .muted { font-weight: normal; }
+
+.files { margin: 0; padding: 0; list-style: none; }
+.files li { display: flex; gap: 8px; align-items: center; min-height: 22px; padding: 0 4px; cursor: default; white-space: nowrap; }
+.files li:hover { background: var(--vscode-list-hoverBackground); }
+.files li:focus { color: var(--vscode-list-activeSelectionForeground); background: var(--vscode-list-activeSelectionBackground); outline: none; }
+.files .status { width: 2.2em; font-family: var(--vscode-editor-font-family); font-weight: 600; }
+.files .path { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.files .actions { display: flex; gap: 4px; }
+.files .actions button { padding: 0 6px; line-height: 18px; }
+.files li:not(:focus) .s-A { color: var(--vscode-gitDecoration-addedResourceForeground); }
+.files li:not(:focus) .s-M, .files li:not(:focus) .s-R, .files li:not(:focus) .s-C, .files li:not(:focus) .s-T { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+.files li:not(:focus) .s-D { color: var(--vscode-gitDecoration-deletedResourceForeground); }
+.files li:not(:focus) .s-U { color: var(--vscode-gitDecoration-conflictingResourceForeground); }

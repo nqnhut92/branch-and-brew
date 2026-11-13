@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b2a20"/>
+      <stop offset="1" stop-color="#1f1612"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <!-- cup -->
+  <path d="M58 118h112v38c0 31-25 56-56 56s-56-25-56-56z" fill="#f4ead8"/>
+  <path d="M170 132h12a22 22 0 0 1 0 44h-14" fill="none" stroke="#f4ead8" stroke-width="12" stroke-linecap="round"/>
+  <!-- branch graph as steam -->
+  <g fill="none" stroke="#f0a04b" stroke-width="10" stroke-linecap="round">
+    <path d="M90 104V44"/>
+    <path d="M90 92c0-22 46-14 46-40"/>
+  </g>
+  <circle cx="90" cy="44" r="12" fill="#f0a04b"/>
+  <circle cx="136" cy="44" r="12" fill="#f0a04b"/>
+  <circle cx="90" cy="104" r="12" fill="#f0a04b"/>
+</svg>

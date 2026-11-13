@@ -1,0 +1,568 @@
+{
+  "name": "branch-and-brew",
+  "displayName": "Branch and Brew",
+  "description": "Multi-repository Git panel, TortoiseGit-style log and rebase, three-pane merge, and a Java/Maven toolchain.",
+  "version": "0.0.1",
+  "publisher": "nqnhut92",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nqnhut92/branch-and-brew.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "branchAndBrew",
+          "title": "Branch and Brew",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "branchAndBrew": [
+        {
+          "id": "branchAndBrew.repos",
+          "name": "Repositories"
+        },
+        {
+          "id": "branchAndBrew.accounts",
+          "name": "Accounts",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "branchAndBrew.repos",
+        "contents": "No repositories yet.\n[Scan Folder for Repositories](command:branchAndBrew.scanFolder)\n[Add Repository](command:branchAndBrew.addRepository)"
+      },
+      {
+        "view": "branchAndBrew.accounts",
+        "contents": "Connect an account to browse and clone its repositories.\n[Add Account](command:branchAndBrew.addAccount)\n[Clone from URL](command:branchAndBrew.cloneUrl)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "branchAndBrew.addRepository",
+        "title": "Add Repository…",
+        "category": "Branch and Brew",
+        "icon": "$(add)"
+      },
+      {
+        "command": "branchAndBrew.scanFolder",
+        "title": "Scan Folder for Repositories…",
+        "category": "Branch and Brew",
+        "icon": "$(search)"
+      },
+      {
+        "command": "branchAndBrew.refresh",
+        "title": "Refresh",
+        "category": "Branch and Brew",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "branchAndBrew.pullAll",
+        "title": "Pull All",
+        "category": "Branch and Brew",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "branchAndBrew.createGroup",
+        "title": "New Group…",
+        "category": "Branch and Brew",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "branchAndBrew.manageProfiles",
+        "title": "Identity Profiles…",
+        "category": "Branch and Brew",
+        "icon": "$(account)"
+      },
+      {
+        "command": "branchAndBrew.pullGroup",
+        "title": "Pull All in Group",
+        "category": "Branch and Brew",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "branchAndBrew.renameGroup",
+        "title": "Rename Group…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.setGroupProfile",
+        "title": "Set Identity Profile…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.deleteGroup",
+        "title": "Delete Group",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.resolveConflicts",
+        "title": "Resolve Conflicts…",
+        "category": "Branch and Brew",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "branchAndBrew.showLog",
+        "title": "Show Log",
+        "category": "Branch and Brew",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "branchAndBrew.interactiveRebase",
+        "title": "Interactive Rebase…",
+        "category": "Branch and Brew",
+        "icon": "$(git-pull-request-draft)"
+      },
+      {
+        "command": "branchAndBrew.fetch",
+        "title": "Fetch",
+        "category": "Branch and Brew",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "branchAndBrew.pull",
+        "title": "Pull",
+        "category": "Branch and Brew",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "branchAndBrew.push",
+        "title": "Push",
+        "category": "Branch and Brew",
+        "icon": "$(repo-push)"
+      },
+      {
+        "command": "branchAndBrew.switchBranch",
+        "title": "Switch Branch…",
+        "category": "Branch and Brew",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "branchAndBrew.newBranch",
+        "title": "New Branch…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.stash",
+        "title": "Stash Changes…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.stashPop",
+        "title": "Pop Stash",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.openHere",
+        "title": "Open in This Window",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.openNewWindow",
+        "title": "Open in New Window",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.openTerminal",
+        "title": "Open Terminal Here",
+        "category": "Branch and Brew",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "branchAndBrew.gitIdentity",
+        "title": "Git Identity…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.moveToGroup",
+        "title": "Move to Group…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.removeRepository",
+        "title": "Remove from List",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.addAccount",
+        "title": "Add Account…",
+        "category": "Branch and Brew",
+        "icon": "$(add)"
+      },
+      {
+        "command": "branchAndBrew.browseAccount",
+        "title": "Browse and Clone…",
+        "category": "Branch and Brew",
+        "icon": "$(repo-clone)"
+      },
+      {
+        "command": "branchAndBrew.cloneUrl",
+        "title": "Clone from URL…",
+        "category": "Branch and Brew",
+        "icon": "$(link)"
+      },
+      {
+        "command": "branchAndBrew.removeAccount",
+        "title": "Remove Account",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.installJdk",
+        "title": "Install JDK…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.installMaven",
+        "title": "Install Maven…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.maven.build",
+        "title": "Build",
+        "category": "Branch and Brew (Maven)"
+      },
+      {
+        "command": "branchAndBrew.maven.buildSkipTests",
+        "title": "Build Skipping Tests",
+        "category": "Branch and Brew (Maven)"
+      },
+      {
+        "command": "branchAndBrew.maven.test",
+        "title": "Run Tests",
+        "category": "Branch and Brew (Maven)"
+      },
+      {
+        "command": "branchAndBrew.maven.buildModule",
+        "title": "Build Module…",
+        "category": "Branch and Brew (Maven)"
+      },
+      {
+        "command": "branchAndBrew.maven.custom",
+        "title": "Custom Goals…",
+        "category": "Branch and Brew (Maven)"
+      },
+      {
+        "command": "branchAndBrew.javaVersion",
+        "title": "Java Version…",
+        "category": "Branch and Brew"
+      },
+      {
+        "command": "branchAndBrew.showToolchain",
+        "title": "Show Toolchain",
+        "category": "Branch and Brew"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "branchAndBrew.pullAll",
+          "when": "view == branchAndBrew.repos",
+          "group": "navigation@1"
+        },
+        {
+          "command": "branchAndBrew.addRepository",
+          "when": "view == branchAndBrew.repos",
+          "group": "navigation@2"
+        },
+        {
+          "command": "branchAndBrew.refresh",
+          "when": "view == branchAndBrew.repos",
+          "group": "navigation@3"
+        },
+        {
+          "command": "branchAndBrew.scanFolder",
+          "when": "view == branchAndBrew.repos",
+          "group": "1_add@1"
+        },
+        {
+          "command": "branchAndBrew.createGroup",
+          "when": "view == branchAndBrew.repos",
+          "group": "2_groups@1"
+        },
+        {
+          "command": "branchAndBrew.manageProfiles",
+          "when": "view == branchAndBrew.repos",
+          "group": "2_groups@2"
+        },
+        {
+          "command": "branchAndBrew.installJdk",
+          "when": "view == branchAndBrew.repos",
+          "group": "3_java@1"
+        },
+        {
+          "command": "branchAndBrew.installMaven",
+          "when": "view == branchAndBrew.repos",
+          "group": "3_java@2"
+        },
+        {
+          "command": "branchAndBrew.addAccount",
+          "when": "view == branchAndBrew.accounts",
+          "group": "navigation@1"
+        },
+        {
+          "command": "branchAndBrew.cloneUrl",
+          "when": "view == branchAndBrew.accounts",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "branchAndBrew.resolveConflicts",
+          "when": "view == branchAndBrew.repos && viewItem =~ /conflict/",
+          "group": "inline@0"
+        },
+        {
+          "command": "branchAndBrew.resolveConflicts",
+          "when": "view == branchAndBrew.repos && viewItem =~ /conflict/",
+          "group": "0_conflict@1"
+        },
+        {
+          "command": "branchAndBrew.pull",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "inline@1"
+        },
+        {
+          "command": "branchAndBrew.push",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "inline@2"
+        },
+        {
+          "command": "branchAndBrew.fetch",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "1_sync@1"
+        },
+        {
+          "command": "branchAndBrew.pull",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "1_sync@2"
+        },
+        {
+          "command": "branchAndBrew.push",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "1_sync@3"
+        },
+        {
+          "command": "branchAndBrew.showLog",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "1_view@1"
+        },
+        {
+          "command": "branchAndBrew.interactiveRebase",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "1_view@2"
+        },
+        {
+          "command": "branchAndBrew.switchBranch",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "2_branch@1"
+        },
+        {
+          "command": "branchAndBrew.newBranch",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "2_branch@2"
+        },
+        {
+          "command": "branchAndBrew.stash",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "2_branch@3"
+        },
+        {
+          "command": "branchAndBrew.stashPop",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "2_branch@4"
+        },
+        {
+          "submenu": "branchAndBrew.mavenMenu",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo.* maven/",
+          "group": "2_maven@1"
+        },
+        {
+          "submenu": "branchAndBrew.openMenu",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "3_open@1"
+        },
+        {
+          "command": "branchAndBrew.gitIdentity",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "4_manage@1"
+        },
+        {
+          "command": "branchAndBrew.moveToGroup",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "4_manage@2"
+        },
+        {
+          "command": "branchAndBrew.removeRepository",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "9_danger@1"
+        },
+        {
+          "command": "branchAndBrew.pullGroup",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^(group|ungrouped)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "branchAndBrew.pullGroup",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^(group|ungrouped)$/",
+          "group": "1_sync@1"
+        },
+        {
+          "command": "branchAndBrew.renameGroup",
+          "when": "view == branchAndBrew.repos && viewItem == group",
+          "group": "2_manage@1"
+        },
+        {
+          "command": "branchAndBrew.setGroupProfile",
+          "when": "view == branchAndBrew.repos && viewItem == group",
+          "group": "2_manage@2"
+        },
+        {
+          "command": "branchAndBrew.deleteGroup",
+          "when": "view == branchAndBrew.repos && viewItem == group",
+          "group": "9_danger@1"
+        },
+        {
+          "command": "branchAndBrew.browseAccount",
+          "when": "view == branchAndBrew.accounts && viewItem =~ /browsable/",
+          "group": "inline@1"
+        },
+        {
+          "command": "branchAndBrew.browseAccount",
+          "when": "view == branchAndBrew.accounts && viewItem =~ /browsable/",
+          "group": "1_clone@1"
+        },
+        {
+          "command": "branchAndBrew.cloneUrl",
+          "when": "view == branchAndBrew.accounts && viewItem =~ /^account/",
+          "group": "1_clone@2"
+        },
+        {
+          "command": "branchAndBrew.removeAccount",
+          "when": "view == branchAndBrew.accounts && viewItem =~ /^account/",
+          "group": "9_danger@1"
+        }
+      ],
+      "branchAndBrew.openMenu": [
+        {
+          "command": "branchAndBrew.openHere",
+          "group": "1_open@1"
+        },
+        {
+          "command": "branchAndBrew.openNewWindow",
+          "group": "1_open@2"
+        },
+        {
+          "command": "branchAndBrew.openTerminal",
+          "group": "1_open@3"
+        }
+      ],
+      "branchAndBrew.mavenMenu": [
+        {
+          "command": "branchAndBrew.maven.build",
+          "group": "1_run@1"
+        },
+        {
+          "command": "branchAndBrew.maven.buildSkipTests",
+          "group": "1_run@2"
+        },
+        {
+          "command": "branchAndBrew.maven.test",
+          "group": "1_run@3"
+        },
+        {
+          "command": "branchAndBrew.maven.buildModule",
+          "group": "1_run@4"
+        },
+        {
+          "command": "branchAndBrew.maven.custom",
+          "group": "1_run@5"
+        },
+        {
+          "command": "branchAndBrew.javaVersion",
+          "group": "2_java@1"
+        },
+        {
+          "command": "branchAndBrew.showToolchain",
+          "group": "2_java@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Branch and Brew",
+      "properties": {
+        "branchAndBrew.fetchIntervalMinutes": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "Fetch every registered repository in the background every this many minutes. `0` turns it off. Background fetches never ask for credentials."
+        },
+        "branchAndBrew.merge.applyNonConflictingChanges": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the three-pane merge with every change that does not conflict already in the result. Turn off to start from the common ancestor and apply them yourself with **Apply Non-Conflicting**."
+        },
+        "branchAndBrew.java.jdkFeedUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "URL of the JDK list for **Install JDK**. Empty uses the feed IntelliJ IDEA reads (`https://download.jetbrains.com/jdk/feed/v1/jdks.json`). When it cannot be read, Amazon Corretto and Eclipse Temurin are offered instead."
+        }
+      }
+    },
+    "submenus": [
+      {
+        "id": "branchAndBrew.openMenu",
+        "label": "Open"
+      },
+      {
+        "id": "branchAndBrew.mavenMenu",
+        "label": "Maven"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "package:prod": "npm run typecheck && node esbuild.mjs --production",
+    "vscode:prepublish": "npm run package:prod",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --no-error-on-unmatched-pattern src scripts test",
+    "test": "vitest run",
+    "test:integration": "npm run build && node esbuild.mjs --tests && vscode-test",
+    "vsix": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/vscode": "1.90.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "mocha": "^12.0.3",
+    "monaco-editor": "^0.57.0",
+    "node-diff3": "^3.2.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  },
+  "icon": "media/icon.png"
+}

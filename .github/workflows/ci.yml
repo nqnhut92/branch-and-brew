@@ -1,0 +1,116 @@
+name: CI
+
+# Private repo on the Free plan: 2,000 minutes a month, where a Windows minute counts 2x and a
+# macOS minute 10x, and 20 jobs (5 macOS) may run at once across the whole account. So: Linux
+# (1x) carries the full suite, Windows (2x) runs what is Windows-specific, and macOS (10x) runs
+# only weekly or by hand. At most two jobs run at once, which leaves the account's other repos
+# their slots.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**']
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+# A newer push makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  linux:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run vsix
+      - uses: actions/cache@v4
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: vscode-test-${{ runner.os }}-
+      - name: Download VS Code (with retries)
+        run: node .github/scripts/download-vscode.mjs stable 1.90.0
+      - name: Integration tests (VS Code stable)
+        run: xvfb-run -a npm run test:integration
+      - name: Integration tests (minimum supported VS Code)
+        run: xvfb-run -a npm run test:integration
+        env:
+          VSCODE_TEST_VERSION: 1.90.0
+      - name: Integration tests against the packaged .vsix
+        run: |
+          unzip -q "$(ls *.vsix)" -d packaged
+          node esbuild.mjs --tests
+          VSCODE_TEST_EXTENSION_PATH="$PWD/packaged/extension" xvfb-run -a npx vscode-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: branch-and-brew-vsix
+          path: '*.vsix'
+          retention-days: 7
+
+  # Paths, line endings and the .cmd/.exe handling differ here, so this is the one OS worth the 2x.
+  windows:
+    if: github.event_name != 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep Defender away from node_modules (file IO is the slow part on Windows)
+        shell: pwsh
+        run: Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run vsix
+      - uses: actions/cache@v4
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: vscode-test-${{ runner.os }}-
+      - name: Download VS Code (with retries)
+        run: node .github/scripts/download-vscode.mjs stable
+      - name: Integration tests (VS Code stable)
+        run: npm run test:integration
+      - name: Integration tests against the packaged .vsix
+        shell: pwsh
+        run: |
+          Copy-Item (Get-Item *.vsix).FullName packaged.zip
+          Expand-Archive packaged.zip -DestinationPath packaged
+          node esbuild.mjs --tests
+          $env:VSCODE_TEST_EXTENSION_PATH = (Resolve-Path packaged/extension).Path
+          npx vscode-test
+
+  # 10x minutes: weekly, or run it by hand before a release (Actions > CI > Run workflow).
+  macos:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: node .github/scripts/download-vscode.mjs stable
+      - run: npm run test:integration

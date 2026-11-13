@@ -1,0 +1,37 @@
+.merge { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
+
+.merge .toolbar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+.merge .file { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.merge .counter { padding: 1px 8px; border-radius: 10px; white-space: nowrap; color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground)); background: var(--vscode-inputValidation-errorBackground); border: 1px solid var(--vscode-inputValidation-errorBorder); }
+.merge .counter.done { color: var(--vscode-foreground); background: transparent; border-color: var(--vscode-panel-border); }
+.merge button.primary { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+.merge button.primary:hover { background: var(--vscode-button-hoverBackground); }
+
+.panes { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr) 44px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.panes header { padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--vscode-editorGroupHeader-tabsBackground); border-bottom: 1px solid var(--vscode-panel-border); }
+.panes > span { background: var(--vscode-editorGroupHeader-tabsBackground); border-bottom: 1px solid var(--vscode-panel-border); }
+.panes .editor { min-width: 0; min-height: 0; overflow: hidden; }
+
+.gutter { position: relative; overflow: hidden; background: var(--vscode-editorGutter-background, var(--vscode-editor-background)); border-left: 1px solid var(--vscode-panel-border); border-right: 1px solid var(--vscode-panel-border); }
+.gutter svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.link { stroke-width: 1; }
+.link.change { fill: var(--vscode-editor-findMatchHighlightBackground); stroke: var(--vscode-charts-yellow); }
+.link.conflict { fill: var(--vscode-inputValidation-errorBackground); stroke: var(--vscode-editorError-foreground); }
+.link.resolved { fill: var(--vscode-diffEditor-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground)); stroke: var(--vscode-charts-green); }
+
+.gutter .actions { position: absolute; left: 0; right: 0; display: flex; justify-content: space-between; height: 18px; }
+.gutter .actions button { width: 20px; height: 18px; padding: 0; line-height: 16px; color: var(--vscode-foreground); background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 3px; }
+.gutter .actions button:hover { background: var(--vscode-toolbar-hoverBackground); }
+.gutter .actions .accept { font-weight: 700; }
+
+/* Whole-line highlights inside the editors */
+.chunk-change { background: var(--vscode-editor-findMatchHighlightBackground); }
+.chunk-conflict { background: var(--vscode-inputValidation-errorBackground); }
+.chunk-resolved { background: var(--vscode-diffEditor-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground)); }
+
+/* Monaco check (developer command) */
+#root.three-pane { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; height: 100vh; background: var(--vscode-panel-border); }
+#root.three-pane section { display: flex; flex-direction: column; min-width: 0; background: var(--vscode-editor-background); }
+#root.three-pane header { padding: 4px 8px; background: var(--vscode-editorGroupHeader-tabsBackground); border-bottom: 1px solid var(--vscode-panel-border); }
+#root.three-pane .editor { flex: 1; min-height: 0; }
+.worker-probe { position: absolute; left: -10000px; width: 400px; height: 200px; }
