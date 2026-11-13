@@ -4,13 +4,13 @@ Branch and Brew is a VS Code extension written in TypeScript. This repository is
 
 ## Before every push
 
-CI does not run macOS on each push (macOS minutes cost ten times a Linux minute on the Free plan), and the maintainer's machine is a Mac. So **you run the macOS checks yourself, locally, before pushing**:
+Run the checks locally first; they are quick and match what CI runs on macOS:
 
 ```bash
 npm run lint && npm run typecheck && npm test && npm run test:integration
 ```
 
-Push only when all four pass. Say in your report what you ran and what you could not run. CI then covers Linux and Windows; macOS runs weekly and by hand ([docs/development.md](docs/development.md#ci)).
+Push when they pass, and say in your report what you ran and what you could not run. CI then runs Linux, Windows and macOS ([docs/development.md](docs/development.md#ci)); watch it and fix it if it fails.
 
 ## Code rules
 
@@ -28,4 +28,4 @@ Push only when all four pass. Say in your report what you ran and what you could
 - Keep `README.md` short. Detail belongs in `docs/`.
 - Record a choice that is not obvious from the code in `docs/DECISIONS.md`, with one line of reasoning.
 - Report honestly: what was run, what passed, what could not be run or verified (real accounts, real hosts and a human looking at the UI are the usual gaps).
-- CI minutes are limited. Do not add jobs, matrix entries or triggers without checking the cost notes in `docs/development.md`.
+- The account's concurrent-job limit is shared with other repositories. Keep CI jobs few and parallel; do not add jobs, matrix entries or triggers without checking `docs/development.md`.

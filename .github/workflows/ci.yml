@@ -1,18 +1,15 @@
 name: CI
 
-# Private repo on the Free plan: 2,000 minutes a month, where a Windows minute counts 2x and a
-# macOS minute 10x, and 20 jobs (5 macOS) may run at once across the whole account. So: Linux
-# (1x) carries the full suite, Windows (2x) runs what is Windows-specific, and macOS (10x) runs
-# only weekly or by hand. At most two jobs run at once, which leaves the account's other repos
-# their slots.
+# Public repository: standard GitHub-hosted runners cost no minutes, so every push runs the full
+# suite on Linux, Windows and macOS. The jobs run in parallel and are kept few, because the
+# account's concurrent-job limit (20 jobs, 5 macOS on the Free plan) is shared with its other
+# repositories.
 on:
   push:
     branches: [main]
     paths-ignore: ['**.md', 'docs/**']
   pull_request:
     paths-ignore: ['**.md', 'docs/**']
-  schedule:
-    - cron: '17 3 * * 1'
   workflow_dispatch:
 
 # A newer push makes the older run pointless.
@@ -25,8 +22,8 @@ defaults:
     shell: bash
 
 jobs:
+  # Lint, types, unit tests and every integration variant on the fastest OS.
   linux:
-    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -64,13 +61,18 @@ jobs:
           path: '*.vsix'
           retention-days: 7
 
-  # Paths, line endings and the .cmd/.exe handling differ here, so this is the one OS worth the 2x.
-  windows:
-    runs-on: windows-latest
+  # Windows and macOS: unit tests and integration tests on VS Code stable.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Keep Defender away from node_modules (file IO is the slow part on Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP
       - uses: actions/setup-node@v4
@@ -79,19 +81,74 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run vsix
-        if: github.event_name != 'push' && github.event_name != 'pull_request'
       - uses: actions/cache@v4
         with:
           path: .vscode-test
-          key: vscode-test-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: vscode-test-${{ runner.os }}-
+          key: vscode-test-${{ runner.os }}-stable-${{ hashFiles('package-lock.json') }}
+          restore-keys: vscode-test-${{ runner.os }}-stable-
       - name: Download VS Code (with retries)
         run: node .github/scripts/download-vscode.mjs stable
-      - name: Integration tests (VS Code stable)
-        run: npm run test:integration
-      - name: Integration tests against the packaged .vsix
-        if: github.event_name != 'push' && github.event_name != 'pull_request'
+      - run: npm run test:integration
+
+  # The oldest supported VS Code, in its own job so it does not lengthen the run.
+  minimum-vscode:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep Defender away from node_modules (file IO is the slow part on Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-1.90.0-${{ hashFiles('package-lock.json') }}
+          restore-keys: vscode-test-${{ runner.os }}-1.90.0-
+      - name: Download VS Code (with retries)
+        run: node .github/scripts/download-vscode.mjs 1.90.0
+      - run: npm run test:integration
+        env:
+          VSCODE_TEST_VERSION: 1.90.0
+
+  # The packaged .vsix, unpacked and run, on Windows and macOS.
+  packaged:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep Defender away from node_modules (file IO is the slow part on Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run vsix
+      - uses: actions/cache@v4
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-stable-${{ hashFiles('package-lock.json') }}
+          restore-keys: vscode-test-${{ runner.os }}-stable-
+      - name: Download VS Code (with retries)
+        run: node .github/scripts/download-vscode.mjs stable
+      - name: Integration tests against the packaged .vsix (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Copy-Item (Get-Item *.vsix).FullName packaged.zip
@@ -99,19 +156,9 @@ jobs:
           node esbuild.mjs --tests
           $env:VSCODE_TEST_EXTENSION_PATH = (Resolve-Path packaged/extension).Path
           npx vscode-test
-
-  # 10x minutes: weekly, or run it by hand before a release (Actions > CI > Run workflow).
-  macos:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: node .github/scripts/download-vscode.mjs stable
-      - run: npm run test:integration
+      - name: Integration tests against the packaged .vsix (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          unzip -q "$(ls *.vsix)" -d packaged
+          node esbuild.mjs --tests
+          VSCODE_TEST_EXTENSION_PATH="$PWD/packaged/extension" npx vscode-test

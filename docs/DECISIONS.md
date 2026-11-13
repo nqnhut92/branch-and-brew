@@ -141,9 +141,9 @@ Choices that are not obvious from the code, with the reasoning. Grouped by area.
 ## Testing and CI
 
 - Integration tests that need a webview to draw wait on what it reports, never on frames (see Webviews).
-- The CI layout and its cost reasoning are in [development.md](development.md#ci). In short: the repository is private on the GitHub Free plan (2,000 minutes a month; Windows counts double, macOS ten times; 20 concurrent jobs, 5 macOS, shared by every repository on the account). Linux carries the full suite, Windows runs what is OS-specific, macOS runs weekly and by hand, and macOS is tested locally before each push instead.
+- The repository is public, so runners are free: every push runs Linux, Windows and macOS. The jobs are split (unit and stable, minimum VS Code, packaged) so the run takes about as long as its slowest job, and kept few because the account's concurrent-job limit (20, 5 macOS) is shared with other repositories. The layout and the fallback for a private repository are in [development.md](development.md#ci).
+- There is no scheduled run: with full CI on every push it adds nothing, and GitHub disables scheduled workflows after 60 days without repository activity.
 - Docs-only pushes skip CI, and a newer push cancels the run in progress.
-- The Actions budget stays at `$0` with usage blocked, so exceeding the free quota stops jobs instead of billing.
 
 ## Known limitations
 

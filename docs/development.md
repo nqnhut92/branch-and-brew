@@ -32,22 +32,19 @@ Not covered by tests, because they need a human, a browser or a real account: th
 
 ## CI
 
-`.github/workflows/ci.yml`. The repository is private on the GitHub Free plan: 2,000 minutes a month, where a Windows minute counts double and a macOS minute ten times, and 20 jobs (5 macOS) may run at once across the whole account. The workflow is built around that.
+`.github/workflows/ci.yml`. The repository is public, so GitHub-hosted runners cost no minutes and every push runs the full suite on Linux, Windows and macOS. The jobs run in parallel (a run takes about as long as the slowest one, roughly four minutes) and there are few of them, because the account's concurrent-job limit (20 jobs, 5 macOS on the Free plan) is shared with its other repositories.
 
-| Job | Runs | Does |
+| Job | OS | Does |
 | --- | --- | --- |
-| `linux` (1x) | every push and pull request | lint, typecheck, unit tests, package, integration tests on VS Code stable, on 1.90.0 and on the packaged `.vsix`, under `xvfb-run` |
-| `windows` (2x) | every push and pull request; the packaged `.vsix` test only weekly and on demand | unit tests, integration tests on stable (weekly and on demand: also package and the packaged `.vsix` test) |
-| `macos` (10x) | Mondays 03:17 UTC and on demand, together with the weekly `windows` run (Actions, CI, Run workflow) | unit and integration tests on stable |
+| `linux` | Ubuntu | lint, typecheck, unit tests, package, integration tests on VS Code stable, on 1.90.0 and on the packaged `.vsix`, under `xvfb-run` |
+| `test` | Windows, macOS | unit tests and integration tests on VS Code stable |
+| `minimum-vscode` | Windows, macOS | integration tests on VS Code 1.90.0 |
+| `packaged` | Windows, macOS | integration tests on the packaged `.vsix` |
 
 - Pushes that only touch `*.md` or `docs/` do not run CI.
 - A newer push cancels the run in progress.
-- At most two jobs run at once, which leaves the account's other repositories their slots.
-- Every job has a timeout.
-- The VS Code download is cached per week and OS; a cache is saved once a week, not on every run.
+- Every job has a timeout, and the VS Code download is cached per OS and version.
 - On Windows the workspace and temp folder are excluded from Defender, which speeds up `npm ci` and the tests.
-- Rough cost: about 14 quota minutes per push (Linux 4, Windows 5 at 2x), about 30 per macOS run.
+- Run `npm run lint && npm run typecheck && npm test && npm run test:integration` locally before pushing for quick feedback; CI is the check on all three OSes.
 
-**macOS is not tested per push.** Run `npm run lint && npm run typecheck && npm test && npm run test:integration` on a Mac before pushing, and run the `macos` job by hand before a release.
-
-Current usage: Settings, Billing and licensing, Usage. The Actions budget is `$0` with usage blocked, so going over the free quota blocks jobs instead of billing.
+If the repository ever goes private again, minutes count against the Free plan's 2,000 a month (a Windows minute counts double, a macOS minute ten times) and this layout would use them up quickly: run Linux and Windows per push, and macOS weekly or by hand.
