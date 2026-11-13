@@ -66,7 +66,6 @@ jobs:
 
   # Paths, line endings and the .cmd/.exe handling differ here, so this is the one OS worth the 2x.
   windows:
-    if: github.event_name != 'schedule'
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -81,6 +80,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run vsix
+        if: github.event_name != 'push' && github.event_name != 'pull_request'
       - uses: actions/cache@v4
         with:
           path: .vscode-test
@@ -91,6 +91,7 @@ jobs:
       - name: Integration tests (VS Code stable)
         run: npm run test:integration
       - name: Integration tests against the packaged .vsix
+        if: github.event_name != 'push' && github.event_name != 'pull_request'
         shell: pwsh
         run: |
           Copy-Item (Get-Item *.vsix).FullName packaged.zip

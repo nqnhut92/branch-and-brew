@@ -37,8 +37,8 @@ Not covered by tests, because they need a human, a browser or a real account: th
 | Job | Runs | Does |
 | --- | --- | --- |
 | `linux` (1x) | every push and pull request | lint, typecheck, unit tests, package, integration tests on VS Code stable, on 1.90.0 and on the packaged `.vsix`, under `xvfb-run` |
-| `windows` (2x) | every push and pull request | unit tests, package, integration tests on stable and on the packaged `.vsix` |
-| `macos` (10x) | Mondays 03:17 UTC and on demand (Actions, CI, Run workflow) | unit and integration tests on stable |
+| `windows` (2x) | every push and pull request; the packaged `.vsix` test only weekly and on demand | unit tests, integration tests on stable (weekly and on demand: also package and the packaged `.vsix` test) |
+| `macos` (10x) | Mondays 03:17 UTC and on demand, together with the weekly `windows` run (Actions, CI, Run workflow) | unit and integration tests on stable |
 
 - Pushes that only touch `*.md` or `docs/` do not run CI.
 - A newer push cancels the run in progress.
@@ -46,7 +46,7 @@ Not covered by tests, because they need a human, a browser or a real account: th
 - Every job has a timeout.
 - The VS Code download is cached per week and OS; a cache is saved once a week, not on every run.
 - On Windows the workspace and temp folder are excluded from Defender, which speeds up `npm ci` and the tests.
-- Rough cost: about 18 quota minutes per push (Linux 6, Windows 6 at 2x), about 30 per macOS run.
+- Rough cost: about 14 quota minutes per push (Linux 4, Windows 5 at 2x), about 30 per macOS run.
 
 **macOS is not tested per push.** Run `npm run lint && npm run typecheck && npm test && npm run test:integration` on a Mac before pushing, and run the `macos` job by hand before a release.
 
