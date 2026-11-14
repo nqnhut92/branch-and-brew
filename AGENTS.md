@@ -28,4 +28,4 @@ Push when they pass, and say in your report what you ran and what you could not 
 - Keep `README.md` short. Detail belongs in `docs/`.
 - Record a choice that is not obvious from the code in `docs/DECISIONS.md`, with one line of reasoning.
 - Report honestly: what was run, what passed, what could not be run or verified (real accounts, real hosts and a human looking at the UI are the usual gaps).
-- The account's concurrent-job limit is shared with other repositories. Keep CI jobs few and parallel; do not add jobs, matrix entries or triggers without checking `docs/development.md`.
+- The repository is public, so CI minutes cost nothing and a re-run is fine. What is shared with the account's other repositories is the concurrent-job limit (20 jobs, 5 on macOS). Keep CI jobs few and parallel, run re-runs one after another, and do not add jobs, matrix entries or triggers without checking `docs/development.md`.
