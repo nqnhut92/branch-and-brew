@@ -42,6 +42,7 @@ Choices that are not obvious from the code, with the reasoning. Grouped by area.
 ## Repositories
 
 - The repository list is one JSON value in `globalState` (`branchAndBrew.repoList`), not synced, because paths are per machine. The pure list model (`core/repos/model.ts`) is unit-tested; the host only stores it.
+- `RepoStore` remembers its own recent writes: a `globalState` value that reads back as one of them is VS Code handing back an older value and is ignored; any other value is another window's and is taken over. VS Code stores all of an extension's `globalState` keys in one object and hands back values it stored earlier, so a write to another key (the accounts) could drop a repository just added; this failed the clone test on Linux CI and reproduced with `test/integration/store.test.ts`. A timer-based wait was tried first and was too short on Windows.
 - Without groups, repositories are listed at the top level; with groups, repositories without one appear under "Ungrouped".
 - The watcher is non-recursive on the git dir (`HEAD`, `index`, `MERGE_HEAD`, `rebase-merge`…) and recursive only on `refs/**` and `packed-refs` in the common dir (`rev-parse --path-format=absolute`, git 2.31+), because recursive watchers are expensive. A commit made outside VS Code shows in about 550 ms.
 - Working-tree edits do not touch `.git`, so they are picked up when the window regains focus and on Refresh.
