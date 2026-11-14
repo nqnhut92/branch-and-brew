@@ -27,7 +27,9 @@ describe('merge session', () => {
     const conflict = startSessions(chunks, true)[3];
     const mine = accept(conflict, 'mine');
     expect([choiceOf(mine), isResolved(mine), pendingSides(mine)]).toEqual(['mine', true, ['theirs']]);
-    expect(choiceOf(accept(mine, 'theirs'))).toBe('mine-theirs');
+    const both = accept(mine, 'theirs');
+    expect(choiceOf(both)).toBe('mine-theirs');
+    expect(isResolved(both)).toBe(true);
     expect(choiceOf(accept(accept(conflict, 'theirs'), 'mine'))).toBe('theirs-mine');
     expect(accept(mine, 'mine')).toBe(mine);
   });
@@ -39,6 +41,6 @@ describe('merge session', () => {
     const both = ignore(one, 'theirs');
     expect([isResolved(both), choiceOf(both), pendingSides(both)]).toEqual([true, 'base', []]);
     const kept = accept(ignore(conflict, 'theirs'), 'mine');
-    expect([choiceOf(kept), pendingSides(kept)]).toEqual(['mine', []]);
+    expect([choiceOf(kept), isResolved(kept), pendingSides(kept)]).toEqual(['mine', true, []]);
   });
 });

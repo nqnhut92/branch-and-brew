@@ -14,12 +14,17 @@ export async function startAskpassHost(
     mainScript: vscode.Uri.joinPath(context.extensionUri, 'scripts', 'askpass.js').fsPath,
     nodePath: process.execPath,
     // A connected account for the host answers silently; only otherwise is the user asked.
-    onPrompt: async (prompt) => await fromAccount?.(prompt) ?? vscode.window.showInputBox({
-      title: 'Git',
-      prompt: prompt.trim(),
-      password: /password|passphrase|token/i.test(prompt),
-      ignoreFocusOut: true,
-    }),
+    onPrompt: async (prompt) => {
+      const from = await fromAccount?.(prompt);
+      if (from !== undefined) return from;
+      if (context.extensionMode === vscode.ExtensionMode.Test) return undefined;
+      return vscode.window.showInputBox({
+        title: 'Git',
+        prompt: prompt.trim(),
+        password: /password|passphrase|token/i.test(prompt),
+        ignoreFocusOut: true,
+      });
+    },
   });
   context.subscriptions.push({ dispose: () => void askpass.close() });
   return askpass;

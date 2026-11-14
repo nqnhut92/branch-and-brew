@@ -26,6 +26,7 @@ const webviews = {
     'merge/main': 'src/webviews/merge/main.ts',
     'log/main': 'src/webviews/log/main.tsx',
     'rebase/main': 'src/webviews/rebase/main.tsx',
+    'brewing/main': 'src/webviews/brewing/main.tsx',
     'monaco/editor.worker': 'monaco-editor/editor/editor.worker',
   },
   outdir: 'dist/webviews',

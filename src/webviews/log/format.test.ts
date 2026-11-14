@@ -9,6 +9,19 @@ describe('log view helpers', () => {
     ]);
   });
 
+  it('filters out remote branches that are not in scope', () => {
+    const branches = [
+      { name: 'main', remote: false },
+      { name: 'origin/main', remote: true },
+      { name: 'origin/devin/other', remote: true },
+    ];
+    const tags = refTags(['HEAD -> main', 'origin/devin/other', 'origin/main', 'tag: v1.0'], ['main'], branches);
+    expect(tags).toEqual([
+      { label: 'main', kind: 'head' },
+      { label: 'v1.0', kind: 'tag' },
+    ]);
+  });
+
   it('formats dates at a fixed width in local time', () => {
     const d = new Date(2026, 0, 5, 9, 7);
     expect(formatDate(d.getTime() / 1000)).toBe('2026-01-05 09:07');

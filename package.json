@@ -44,11 +44,11 @@
     "viewsWelcome": [
       {
         "view": "branchAndBrew.repos",
-        "contents": "No repositories yet.\n[Scan Folder for Repositories](command:branchAndBrew.scanFolder)\n[Add Repository](command:branchAndBrew.addRepository)"
+        "contents": "No repositories yet.\n[Add Repository](command:branchAndBrew.addRepository)\n[Scan Folder](command:branchAndBrew.scanFolder)"
       },
       {
         "view": "branchAndBrew.accounts",
-        "contents": "Connect an account to browse and clone its repositories.\n[Add Account](command:branchAndBrew.addAccount)\n[Clone from URL](command:branchAndBrew.cloneUrl)"
+        "contents": "Connect an account or [clone from URL](command:branchAndBrew.cloneUrl).\n[Add Account](command:branchAndBrew.addAccount)"
       }
     ],
     "commands": [
@@ -116,6 +116,11 @@
         "icon": "$(git-merge)"
       },
       {
+        "command": "branchAndBrew.abortMerge",
+        "title": "Abort Merge…",
+        "category": "Branch and Brew"
+      },
+      {
         "command": "branchAndBrew.showLog",
         "title": "Show Log",
         "category": "Branch and Brew",
@@ -146,6 +151,12 @@
         "icon": "$(repo-push)"
       },
       {
+        "command": "branchAndBrew.merge",
+        "title": "Merge Branch…",
+        "category": "Branch and Brew",
+        "icon": "$(git-merge)"
+      },
+      {
         "command": "branchAndBrew.switchBranch",
         "title": "Switch Branch…",
         "category": "Branch and Brew",
@@ -163,7 +174,7 @@
       },
       {
         "command": "branchAndBrew.stashPop",
-        "title": "Pop Stash",
+        "title": "Stash Pop",
         "category": "Branch and Brew"
       },
       {
@@ -356,14 +367,19 @@
           "group": "1_sync@3"
         },
         {
-          "command": "branchAndBrew.showLog",
-          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
-          "group": "1_view@1"
-        },
-        {
           "command": "branchAndBrew.interactiveRebase",
           "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
           "group": "1_view@2"
+        },
+        {
+          "command": "branchAndBrew.abortMerge",
+          "when": "view == branchAndBrew.repos && viewItem =~ /conflict|merge/",
+          "group": "2_branch@0"
+        },
+        {
+          "command": "branchAndBrew.merge",
+          "when": "view == branchAndBrew.repos && viewItem =~ /^repo/",
+          "group": "2_branch@1"
         },
         {
           "command": "branchAndBrew.switchBranch",
@@ -519,6 +535,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "URL of the JDK list for **Install JDK**. Empty uses the feed IntelliJ IDEA reads (`https://download.jetbrains.com/jdk/feed/v1/jdks.json`). When it cannot be read, Amazon Corretto and Eclipse Temurin are offered instead."
+        },
+        "branchAndBrew.showBrewingProgress": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the TortoiseGit-style Brewing progress dialog with animated coffee and live git command output for operations like pull, push, fetch, and switch branch."
         }
       }
     },

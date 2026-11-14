@@ -62,11 +62,13 @@ export function renameGroup(list: RepoList, groupId: string, name: string): Repo
 }
 
 /** Deletes the group; its repositories stay registered, ungrouped. */
-export function deleteGroup(list: RepoList, groupId: string): RepoList {
+export function deleteGroup(list: RepoList, groupId: string, removeRepos = false): RepoList {
   return {
     ...list,
     groups: list.groups.filter((g) => g.id !== groupId),
-    repos: list.repos.map((r) => (r.groupId === groupId ? { path: r.path } : r)),
+    repos: removeRepos
+      ? list.repos.filter((r) => r.groupId !== groupId)
+      : list.repos.map((r) => (r.groupId === groupId ? { path: r.path } : r)),
   };
 }
 

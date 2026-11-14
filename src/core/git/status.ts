@@ -66,7 +66,7 @@ export async function gitDir(repo: string, options?: RunOptions): Promise<string
 
 export async function getStatus(repo: string, options?: RunOptions): Promise<RepoStatus> {
   // --no-optional-locks: background refreshes must not take the index lock (git-status docs).
-  const r = await run(repo, ['--no-optional-locks', 'status', '--porcelain=v2', '--branch', '-z'], { noQueue: true, ...options });
+  const r = await run(repo, ['--no-optional-locks', 'status', '--porcelain=v2', '--branch', '-z', '--ignore-submodules=dirty'], { noQueue: true, ...options });
   if (r.exitCode !== 0) throw new Error(r.stderr.trim() || 'git status failed');
   return { ...parseStatus(r.stdout), operation: detectOperation(await gitDir(repo, options)) };
 }

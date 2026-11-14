@@ -22,7 +22,7 @@ export function parseChanges(output: string): WorkingChange[] {
 }
 
 export async function getChanges(repo: string, options?: RunOptions): Promise<WorkingChange[]> {
-  const r = await run(repo, ['--no-optional-locks', 'status', '--porcelain=v2', '-z'], { noQueue: true, ...options });
+  const r = await run(repo, ['--no-optional-locks', 'status', '--porcelain=v2', '-z', '--ignore-submodules=dirty'], { noQueue: true, ...options });
   if (r.exitCode !== 0) throw new Error(r.stderr.trim() || 'git status failed');
   return parseChanges(r.stdout);
 }

@@ -25,11 +25,11 @@ input:focus, button:focus-visible, [tabindex]:focus-visible {
 }
 
 button {
-  padding: 2px 8px;
+  padding: 3px 10px;
   color: var(--vscode-button-secondaryForeground);
   background: var(--vscode-button-secondaryBackground);
   border: 1px solid var(--vscode-button-border, transparent);
-  border-radius: 2px;
+  border-radius: 4px;
   font: inherit;
   cursor: pointer;
 }

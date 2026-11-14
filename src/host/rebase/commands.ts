@@ -6,7 +6,7 @@ import { RebasePanel } from '../panels/rebasePanel';
 import { repoName, type Deps } from '../repos/commands';
 import { confirmRebaseStart } from './confirm';
 
-const short = (hash: string) => hash.slice(0, 8);
+const short = (hash: string) => (/^[0-9a-f]{40}$/i.test(hash) ? hash.slice(0, 8) : hash);
 
 /** The rebase already running in the repository, shown in its panel; false when there is none. */
 async function showRunning(deps: Deps, repo: string): Promise<boolean> {

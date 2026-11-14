@@ -34,6 +34,13 @@ describe('repo list model', () => {
     list = deleteGroup(list, group.id);
     expect(list.groups).toEqual([]);
     expect(list.repos.every((r) => r.groupId === undefined)).toBe(true);
+
+    const { list: l3, group: g2 } = createGroup(list, 'Temp');
+    let l4 = moveRepo(l3, b, g2.id);
+    expect(l4.repos).toHaveLength(2);
+    l4 = deleteGroup(l4, g2.id, true);
+    expect(l4.groups).toEqual([]);
+    expect(l4.repos.map((r) => r.path)).toEqual([a]);
   });
 
   it('profiles apply through the group and are unassigned when deleted', () => {

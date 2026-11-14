@@ -5,6 +5,8 @@ export interface Commit {
   parents: string[];
   author: string;
   email: string;
+  committer?: string;
+  committerEmail?: string;
   /** Author date, Unix seconds. */
   date: number;
   /** Decorations as git prints them with %D, e.g. "HEAD -> main", "origin/main", "tag: v1". */
@@ -13,13 +15,13 @@ export interface Commit {
 }
 
 /** Fields separated by US (0x1f); commits separated by NUL via -z. */
-const FORMAT = ['%H', '%P', '%an', '%ae', '%at', '%D', '%s'].join('%x1f');
+const FORMAT = ['%H', '%P', '%an', '%ae', '%at', '%D', '%s', '%cn', '%ce'].join('%x1f');
 export const PAGE_SIZE = 500;
 
 export function parseLog(output: string): Commit[] {
   return output.split('\0').filter((r) => r.trim()).map((record) => {
-    const [hash, parents, author, email, date, refs, subject] = record.replace(/^\n/, '').split('\x1f');
-    return {
+    const [hash, parents, author, email, date, refs, subject, committer, committerEmail] = record.replace(/^\n/, '').split('\x1f');
+    const commit: Commit = {
       hash,
       parents: parents ? parents.split(' ') : [],
       author,
@@ -28,6 +30,9 @@ export function parseLog(output: string): Commit[] {
       refs: refs ? refs.split(', ') : [],
       subject: subject ?? '',
     };
+    if (committer) commit.committer = committer;
+    if (committerEmail) commit.committerEmail = committerEmail;
+    return commit;
   });
 }
 
@@ -46,7 +51,9 @@ export interface LogQuery {
 export function matchesSearch(commit: Commit, text: string): boolean {
   const needle = text.trim().toLowerCase();
   if (!needle) return true;
-  return [commit.subject, commit.author, commit.email].some((s) => s.toLowerCase().includes(needle))
+  return [commit.subject, commit.author, commit.email, commit.committer, commit.committerEmail]
+    .filter(Boolean)
+    .some((s) => s!.toLowerCase().includes(needle))
     || commit.hash.startsWith(needle);
 }
 
@@ -68,6 +75,12 @@ export async function getLog(repo: string, query: LogQuery = {}, options?: RunOp
   if (r.exitCode !== 0) {
     // An unborn branch has no history yet.
     if (/does not have any commits yet|bad (default )?revision 'HEAD'/.test(r.stderr)) return [];
+    if (/fatal: bad revision/.test(r.stderr)) {
+      if (query.revs && query.revs.length > 1) {
+        return getLog(repo, { ...query, revs: ['HEAD'] }, options);
+      }
+      return [];
+    }
     throw new Error(r.stderr.trim() || 'git log failed');
   }
   const commits = parseLog(r.stdout);

@@ -56,6 +56,8 @@ export type CommitAction =
   | 'compareWorkingTree' | 'comparePrevious' | 'copyHash' | 'copyMessage' | 'reset'
   | 'rebaseOnto' | 'rebaseInteractive';
 
+export type BranchAction = 'switch' | 'merge' | 'rebase' | 'delete';
+
 export type FileAction =
   | 'diff' | 'open' | 'stage' | 'unstage' | 'discard' | 'history' | 'blame'
   /** Conflicted files only. */
@@ -80,6 +82,7 @@ export interface LogMethods {
   changes: { params: null; result: WorkingChange[] };
   /** Both answer true when the repository may have changed and the log should reload. */
   commitAction: { params: { action: CommitAction; hash: string }; result: boolean };
+  branchAction: { params: { action: BranchAction; branch: string }; result: boolean };
   fileAction: { params: FileActionParams; result: boolean };
   /** Drops the carried graph so the next page starts fresh, e.g. after a search that hid it. */
   resetGraph: { params: null; result: null };
@@ -137,6 +140,8 @@ export interface MergeMethods {
   init: { params: null; result: MergeInit };
   /** Writes the result and stages the file. False when the user cancelled. */
   save: { params: { lines: string[]; unresolved: number }; result: boolean };
+  /** Aborts git merge and closes the panel. */
+  abort: { params: null; result: boolean };
 }
 
 /** Sent by the merge webview after every change; the integration tests read it. */
@@ -254,3 +259,36 @@ export interface RebaseChanged {
 
 export type RebaseWebviewToHost = RpcRequest | RebaseState;
 export type RebaseHostToWebview = RpcResponse | RebasePerform | RebaseChanged;
+
+// ---- Brewing Progress Dialog (TortoiseGit style) -------------------------------------------
+
+export interface BrewingInit {
+  title: string;
+  repoName: string;
+  command: string;
+  initialLines?: string[];
+  status: 'brewing' | 'success' | 'error';
+}
+
+export interface BrewingMethods {
+  init: { params: null; result: BrewingInit };
+  close: { params: null; result: void };
+}
+
+export interface BrewingOutputEvent {
+  kind: 'event';
+  event: 'output';
+  chunk: string;
+}
+
+export interface BrewingStatusEvent {
+  kind: 'event';
+  event: 'status';
+  status: 'brewing' | 'success' | 'error';
+  exitCode?: number;
+  error?: string;
+}
+
+export type BrewingHostToWebview = RpcResponse | BrewingOutputEvent | BrewingStatusEvent;
+export type BrewingWebviewToHost = RpcRequest;
+

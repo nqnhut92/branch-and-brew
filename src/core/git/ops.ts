@@ -26,6 +26,12 @@ export const fetch = (repo: string, options?: RunOptions) =>
 export const pull = (repo: string, options?: RunOptions) =>
   git(repo, ['pull'], { timeoutMs: NETWORK_TIMEOUT, ...options });
 
+export const merge = (repo: string, ref: string, options?: RunOptions) =>
+  git(repo, ['merge', ref], options);
+
+export const abortMerge = (repo: string, options?: RunOptions) =>
+  git(repo, ['merge', '--abort'], options);
+
 /** Pushes; a branch without upstream is pushed to `remote` and tracks it. */
 export async function push(repo: string, branch: string, hasUpstream: boolean, remote = 'origin', options?: RunOptions) {
   const args = hasUpstream ? ['push'] : ['push', '--set-upstream', remote, branch];
@@ -49,6 +55,9 @@ export async function isValidBranchName(repo: string, name: string): Promise<boo
 
 export const createBranch = (repo: string, name: string, options?: RunOptions) =>
   git(repo, ['switch', '-c', name], options);
+
+export const deleteBranch = (repo: string, name: string, force = false, options?: RunOptions) =>
+  git(repo, ['branch', force ? '-D' : '-d', name], options);
 
 export const stash = (repo: string, message?: string, options?: RunOptions) =>
   git(repo, ['stash', 'push', '--include-untracked', ...(message ? ['-m', message] : [])], options);

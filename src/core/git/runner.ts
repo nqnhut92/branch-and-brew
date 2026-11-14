@@ -14,6 +14,10 @@ export interface RunOptions {
   gitPath?: string;
   /** Skip the per-repo queue (read-only commands that may run in parallel). */
   noQueue?: boolean;
+  /** Live output callbacks for progress/console streaming. */
+  onStdout?: (chunk: string) => void;
+  onStderr?: (chunk: string) => void;
+  onOutput?: (chunk: string) => void;
 }
 
 export interface RunResult {
@@ -115,6 +119,20 @@ function spawnRaw(repoPath: string, args: readonly string[], options: RunOptions
         reject(new GitError(`could not run git: ${err.message}`, args, stderr));
       },
     );
+    if (options.onStdout || options.onOutput) {
+      child.stdout?.on('data', (data: Buffer) => {
+        const str = data.toString('utf8');
+        options.onStdout?.(str);
+        options.onOutput?.(str);
+      });
+    }
+    if (options.onStderr || options.onOutput) {
+      child.stderr?.on('data', (data: Buffer) => {
+        const str = data.toString('utf8');
+        options.onStderr?.(str);
+        options.onOutput?.(str);
+      });
+    }
     if (options.input !== undefined) child.stdin?.end(options.input);
     else child.stdin?.end();
   });

@@ -10,7 +10,7 @@ import { pathKey } from '../../core/repos/model';
 import type {
   LogChanged, LogMethods, LogPage, LogRendered, LogWebviewToHost, RpcResponse,
 } from '../../shared/protocol';
-import { runCommitAction, runFileAction } from '../log/actions';
+import { runBranchAction, runCommitAction, runFileAction } from '../log/actions';
 import type { Deps } from '../repos/commands';
 import { renderWebview, webviewOptions } from './webviewHtml';
 
@@ -35,6 +35,25 @@ export class LogPanel implements vscode.Disposable {
     return created;
   }
 
+  static refreshAll(): void {
+    for (const panel of LogPanel.open_.values()) {
+      panel.refresh();
+    }
+  }
+
+  static refreshRepo(repo: string): void {
+    for (const panel of LogPanel.open_.values()) {
+      if (pathKey(panel.repo) === pathKey(repo)) {
+        panel.refresh();
+      }
+    }
+  }
+
+  refresh(): void {
+    void this.deps.states.refresh(this.repo);
+    void this.panel.webview.postMessage({ kind: 'event', event: 'changed' } satisfies LogChanged);
+  }
+
   private readonly panel: vscode.WebviewPanel;
   private readonly subscriptions: vscode.Disposable[] = [];
   /** Lane layout carried from page to page; `nextSkip` is the page it continues at. */
@@ -53,6 +72,11 @@ export class LogPanel implements vscode.Disposable {
       this.panel.onDidDispose(() => {
         onDispose();
         this.subscriptions.forEach((s) => s.dispose());
+      }),
+      this.panel.onDidChangeViewState((e) => {
+        if (e.webviewPanel.visible) {
+          this.refresh();
+        }
       }),
       deps.states.onDidChange((changed) => {
         if (pathKey(changed) === pathKey(repo)) this.repoChanged();
@@ -117,8 +141,12 @@ export class LogPanel implements vscode.Disposable {
 
     page: async ({ scope, skip, search }): Promise<LogPage> => {
       const filtered = !!search?.trim() || !!this.file;
+      const branches = await listBranches(this.repo);
+      const known = new Set(branches.map((b) => b.name));
+      const validScope = scope.filter((name) => known.has(name) || name === 'HEAD');
+      const safeScope = validScope.length ? validScope : defaultScope(branches);
       const [commits, changes] = await Promise.all([
-        getLog(this.repo, { revs: scope.slice(0, MAX_SCOPE), skip, search, path: this.file }),
+        getLog(this.repo, { revs: safeScope.slice(0, MAX_SCOPE), skip, search, path: this.file }),
         skip === 0 && !this.file ? getChanges(this.repo) : undefined,
       ]);
       let rows: LogPage['rows'] = null;
@@ -146,6 +174,7 @@ export class LogPanel implements vscode.Disposable {
     detail: ({ hash }) => getCommitDetail(this.repo, hash),
     changes: () => getChanges(this.repo),
     commitAction: ({ action, hash }) => runCommitAction(this.deps, this.repo, action, hash),
+    branchAction: ({ action, branch }) => runBranchAction(this.deps, this.repo, action, branch),
     fileAction: (params) => runFileAction(this.deps, this.repo, params, (file) => LogPanel.open(this.deps, this.repo, file)),
   };
 

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { isStaged, isUnstaged } from '../../core/git/changeState';
 import { onlyCurrent, toggleScope } from '../../core/git/scope';
 import type {
-  BranchInfo, Commit, CommitAction, CommitDetail, FileAction, LaneRow, LogInit, LogMethods, LogRendered, WorkingChange,
+  BranchAction, BranchInfo, Commit, CommitAction, CommitDetail, FileAction, LaneRow, LogInit, LogMethods, LogRendered, WorkingChange,
 } from '../../shared/protocol';
 import { ContextMenu, type MenuItem, type MenuRequest } from '../ui/ContextMenu';
 import { createClient, onHostEvent, pageErrors, vscodeApi } from '../ui/rpc';
@@ -134,9 +134,14 @@ function App() {
       setBranches(list);
       // A branch deleted meanwhile leaves the log; git would refuse the whole list otherwise.
       const known = new Set(list.map((b) => b.name));
+      const cur = list.find((b) => b.current)?.name;
       setScope((s) => {
-        const kept = s.filter((name) => known.has(name) || name === 'HEAD');
-        return kept.length === s.length ? s : kept.length ? kept : ['HEAD'];
+        const kept = s.filter((name) => known.has(name) || (name === 'HEAD' && !cur));
+        if (kept.length !== s.length) {
+          if (kept.length) return kept;
+          return cur ? [cur] : ['HEAD'];
+        }
+        return s;
       });
     }).catch(() => undefined);
     void reload();
@@ -177,6 +182,17 @@ function App() {
     if (await request('commitAction', { action, hash }).catch(() => false)) refresh();
   }, [refresh]);
 
+  const branchAction = useCallback(async (action: BranchAction, branch: string) => {
+    const ok = await request('branchAction', { action, branch }).catch(() => false);
+    if (ok) {
+      if (action === 'switch') {
+        const localName = branch.startsWith('origin/') ? branch.slice('origin/'.length) : branch;
+        setScope([localName]);
+      }
+      refresh();
+    }
+  }, [refresh]);
+
   const fileAction = useCallback(async (action: FileAction, file: FileRow) => {
     const hash = selected === UNCOMMITTED ? null : selected;
     const changed = await request('fileAction', { action, hash, path: file.path, oldPath: file.oldPath, change: file.change }).catch(() => false);
@@ -207,6 +223,40 @@ function App() {
       ],
     });
   }, [commitAction]);
+
+  const openBranchMenu = useCallback((branch: BranchInfo, x: number, y: number, returnFocus: HTMLElement) => {
+    const current = branches.find((b) => b.current);
+    const items: MenuItem[] = [];
+    if (!branch.current && current) {
+      items.push({
+        label: `Checkout ${branch.name}`,
+        run: () => void branchAction('switch', branch.name),
+      });
+      items.push({
+        label: `Merge '${branch.name}' into '${current.name}'`,
+        run: () => void branchAction('merge', branch.name),
+      });
+      items.push({
+        label: `Rebase current branch onto '${branch.name}'`,
+        run: () => void branchAction('rebase', branch.name),
+      });
+      items.push('separator');
+    }
+    items.push({
+      label: 'Copy Branch Name',
+      run: () => {
+        void navigator.clipboard?.writeText(branch.name);
+      },
+    });
+    if (!branch.current && !branch.remote) {
+      items.push('separator');
+      items.push({
+        label: `Delete ${branch.name}…`,
+        run: () => void branchAction('delete', branch.name),
+      });
+    }
+    setMenu({ x, y, returnFocus, items });
+  }, [branches, branchAction]);
 
   const openFileMenu = useCallback((file: FileRow, x: number, y: number, returnFocus: HTMLElement) => {
     const item = (label: string, action: FileAction): MenuItem => ({ label, run: () => void fileAction(action, file) });
@@ -239,8 +289,22 @@ function App() {
       {!init.path && (
         <BranchList
           branches={branches} scope={scope} maxScope={init.maxScope}
-          onToggle={(name) => setScope((s) => toggleScope(s, name))}
+          onToggle={(name) => setScope((s) => {
+            const cur = branches.find((b) => b.current)?.name;
+            const resolved = s.map((b) => (b === 'HEAD' && cur ? cur : b));
+            return toggleScope(resolved, name);
+          })}
           onOnlyCurrent={() => setScope(onlyCurrent(branches))}
+          onMenu={openBranchMenu}
+          onSwitch={(name) => {
+            const cur = branches.find((b) => b.current)?.name;
+            if (cur === name) {
+              setScope([name]);
+              refresh();
+              return;
+            }
+            void branchAction('switch', name);
+          }}
         />
       )}
       <main>
@@ -257,17 +321,28 @@ function App() {
                   Graph off: <button onClick={() => void restoreGraph()}>restore</button>
                 </span>
               )
-              : <span className="graph-state" id="log-graph">Graph on</span>}
+              : <span className="graph-state on" id="log-graph" aria-hidden="true">Graph on</span>}
           <span className="muted count" role="status">
             {loading ? 'Loading…' : `${loaded.commits.length}${loaded.done ? '' : '+'} ${filtered ? 'matching ' : ''}commits`}
           </span>
-          <button onClick={refresh} title="Read the history and branches again">Refresh</button>
+          <button
+            type="button"
+            className="toolbar-btn"
+            onClick={refresh}
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path fillRule="evenodd" clipRule="evenodd" d="M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.954A6 6 0 1 1 4.681 3z" />
+            </svg>
+          </button>
         </div>
         {init.path && <div className="muted pad">History of {init.path}</div>}
         <CommitTable
           commits={loaded.commits} rows={loaded.rows} uncommitted={filtered ? 0 : changes.length}
           selected={selected} onSelect={setSelected} onMenu={openCommitMenu} onNearEnd={loadMore}
           restoreScroll={restoreScroll} hasMore={!loaded.done} onScrollTop={rememberScroll}
+          scope={scope} branches={branches}
           empty={search
             ? `No commit matches “${search}”.`
             : init.path ? 'No commit touches this file.' : 'No commits in the selected branches.'}
@@ -275,7 +350,7 @@ function App() {
         {selected === UNCOMMITTED
           ? <WorkingTreeView changes={changes} onFile={fileAction} onMenu={openFileMenu} />
           : detail && selected === detail.hash
-            ? <CommitDetailView detail={detail} onFile={fileAction} onMenu={openFileMenu} />
+            ? <CommitDetailView detail={detail} labels={loaded.commits.find((c) => c.hash === selected)?.refs} onFile={fileAction} onMenu={openFileMenu} />
             : <section className="detail single"><p className="muted pad">Select a commit to see its message and files.</p></section>}
       </main>
       {menu && <ContextMenu request={menu} onClose={closeMenu} />}

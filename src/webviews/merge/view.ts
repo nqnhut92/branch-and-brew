@@ -53,9 +53,21 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     b.addEventListener('click', run);
     return b;
   };
-  const previousButton = button('↑ Previous', 'Go to the previous unresolved conflict', () => goToConflict(-1));
-  const nextButton = button('↓ Next', 'Go to the next unresolved conflict', () => goToConflict(1));
+  const navButton = (iconSvg: string, text: string, title: string, run: () => void) => {
+    const b = toolbar.appendChild(el('button', 'nav-btn'));
+    b.innerHTML = `${iconSvg}<span>${text}</span>`;
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.addEventListener('click', run);
+    return b;
+  };
+  const upIcon = `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M8 3.5l4.5 4.5-.7.7L8.5 5.4V13H7.5V5.4L4.2 8.7l-.7-.7L8 3.5z"/></svg>`;
+  const downIcon = `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M8 12.5L3.5 8l.7-.7 3.3 3.3V3h1v7.6l3.3-3.3.7.7-4.5 4.5z"/></svg>`;
+  const previousButton = navButton(upIcon, 'Previous', 'Go to the previous unresolved conflict', () => goToConflict(-1));
+  const nextButton = navButton(downIcon, 'Next', 'Go to the next unresolved conflict', () => goToConflict(1));
   const applyButton = button('Apply Non-Conflicting', 'Put every change that does not conflict into the result', applyNonConflicting);
+  const abortButton = button('Abort Merge…', 'Abort git merge and discard all conflict resolutions', () => void abort());
+  abortButton.classList.add('danger');
   button('Save', 'Write the result to the file and mark it resolved', () => void save(), true);
 
   const grid = root.appendChild(el('div', 'panes'));
@@ -112,6 +124,15 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     r.tracker = model.deltaDecorations([r.tracker], [{ range: trackRange(startLine, length), options: TRACKER }])[0];
   };
   const stateOf = (r: Region) => (isResolved(r.session) ? 'resolved' : r.chunk.kind === 'conflict' ? 'conflict' : 'change');
+  const sideState = (r: Region, side: Side) => {
+    if (r.session.taken.includes(side) || r.session.ignored.includes(side)) return 'resolved';
+    return stateOf(r);
+  };
+
+  const versionMap = new Map<number, ChunkSession[]>();
+  const cloneSessions = (list: readonly ChunkSession[]): ChunkSession[] =>
+    list.map((s) => ({ ...s, taken: [...s.taken], ignored: [...s.ignored] }));
+  versionMap.set(model.getAlternativeVersionId(), cloneSessions(regions.map((r) => r.session)));
 
   /** Puts what the session now says into the region's place in the result. */
   function write(r: Region): void {
@@ -121,13 +142,18 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     editors.result.executeEdits('merge', [{ range: trackRange(at.start, at.length), text: text(lines), forceMoveMarkers: true }]);
     editors.result.pushUndoStop();
     setPlace(r, at.start, lines.length);
+    versionMap.set(model.getAlternativeVersionId(), cloneSessions(regions.map((x) => x.session)));
   }
 
   function act(r: Region, side: Side, what: 'accept' | 'ignore'): void {
     const next = what === 'accept' ? accept(r.session, side) : ignore(r.session, side);
     if (next === r.session) return;
     r.session = next;
-    if (what === 'accept') write(r);
+    if (what === 'accept') {
+      write(r);
+    } else {
+      versionMap.set(model.getAlternativeVersionId(), cloneSessions(regions.map((x) => x.session)));
+    }
     refresh();
   }
 
@@ -153,11 +179,14 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     theirs: editors.theirs.createDecorationsCollection(),
   };
   function highlight(): void {
-    highlights.result.set(lineDecorations(regions.map((r) => ({ ...place(r), state: stateOf(r) }))));
+    highlights.result.set(lineDecorations(regions.map((r) => ({
+      ...place(r),
+      state: r.session.taken.length > 0 ? 'resolved' : stateOf(r),
+    }))));
     for (const side of ['mine', 'theirs'] as const) {
       // A side lights up only where it differs from base.
       const shown = regions.filter((r) => r.chunk.kind === 'conflict' || r.chunk.kind === 'same' || r.chunk.kind === side);
-      highlights[side].set(lineDecorations(shown.map((r) => ({ ...r.chunk[side], state: stateOf(r) }))));
+      highlights[side].set(lineDecorations(shown.map((r) => ({ ...r.chunk[side], state: sideState(r, side) }))));
     }
   }
 
@@ -187,7 +216,7 @@ export async function startMergeView(workerUrl: string): Promise<void> {
       const [x0, x1] = side === 'mine' ? [0, width] : [width, 0];
       const mid = width / 2;
       paths.push(
-        `<path class="link ${stateOf(r)}" d="M${x0} ${outer[0]}C${mid} ${outer[0]} ${mid} ${inner[0]} ${x1} ${inner[0]}` +
+        `<path class="link ${sideState(r, side)}" d="M${x0} ${outer[0]}C${mid} ${outer[0]} ${mid} ${inner[0]} ${x1} ${inner[0]}` +
         `L${x1} ${Math.max(inner[1], inner[0] + 1)}C${mid} ${inner[1]} ${mid} ${outer[1]} ${x0} ${Math.max(outer[1], outer[0] + 1)}Z"/>`,
       );
       if (!pendingSides(r.session).includes(side) || outer[0] < -lineHeight || outer[0] > height) continue;
@@ -196,8 +225,8 @@ export async function startMergeView(workerUrl: string): Promise<void> {
       const add = r.session.taken.length > 0;
       const arrow = side === 'mine' ? '»' : '«';
       const name = side === 'mine' ? init.labels.mine : init.labels.theirs;
-      const acceptButton = row.appendChild(el('button', 'accept', arrow));
-      acceptButton.title = add ? `Also add this chunk from ${name} below` : `Accept this chunk from ${name}`;
+      const acceptButton = row.appendChild(el('button', `accept${add ? ' append' : ''}`, arrow));
+      acceptButton.title = add ? `Append this chunk from ${name} below` : `Accept this chunk from ${name}`;
       acceptButton.setAttribute('aria-label', acceptButton.title);
       acceptButton.addEventListener('click', () => act(r, side, 'accept'));
       const ignoreButton = row.appendChild(el('button', 'ignore', '✕'));
@@ -280,7 +309,18 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     editors[pane].onDidScrollChange((e) => { if (e.scrollTopChanged) follow(pane); });
     editors[pane].onDidLayoutChange(draw);
   }
-  model.onDidChangeContent(() => scheduleDraw(true));
+  model.onDidChangeContent(() => {
+    const ver = model.getAlternativeVersionId();
+    const recorded = versionMap.get(ver);
+    if (recorded) {
+      for (let i = 0; i < regions.length; i++) {
+        regions[i].session = { ...recorded[i], taken: [...recorded[i].taken], ignored: [...recorded[i].ignored] };
+      }
+    } else {
+      versionMap.set(ver, cloneSessions(regions.map((x) => x.session)));
+    }
+    refresh();
+  });
 
   // ---- Navigation, save, state ----------------------------------------------------------------
   function goToConflict(direction: 1 | -1): void {
@@ -300,6 +340,10 @@ export async function startMergeView(workerUrl: string): Promise<void> {
     const lines = model.getValue().split(/\r?\n/);
     if (lines[lines.length - 1] === '') lines.pop();
     await request('save', { lines, unresolved: unresolvedConflicts(regions.map((r) => r.session)) }).catch(() => false);
+  }
+
+  async function abort(): Promise<void> {
+    await request('abort', null).catch(() => false);
   }
 
   function report(): void {

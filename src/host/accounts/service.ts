@@ -39,15 +39,19 @@ export class Accounts implements vscode.Disposable {
   answered = 0;
   private readonly changed = new vscode.EventEmitter<void>();
   readonly onDidChange = this.changed.event;
+  private cache: Account[] | undefined;
 
   constructor(private readonly context: Pick<vscode.ExtensionContext, 'globalState' | 'secrets'>) {}
 
   list(): Account[] {
+    if (this.cache !== undefined) return [...this.cache];
     const stored = this.context.globalState.get<Account[]>(ACCOUNTS_KEY);
-    return Array.isArray(stored) ? stored.filter((a) => a && typeof a.id === 'string' && typeof a.host === 'string') : [];
+    this.cache = Array.isArray(stored) ? stored.filter((a) => a && typeof a.id === 'string' && typeof a.host === 'string') : [];
+    return [...this.cache];
   }
 
   private async save(accounts: Account[]): Promise<void> {
+    this.cache = [...accounts];
     await this.context.globalState.update(ACCOUNTS_KEY, accounts);
     this.changed.fire();
   }
@@ -115,6 +119,12 @@ export class Accounts implements vscode.Disposable {
   async remove(id: string): Promise<void> {
     await this.context.secrets.delete(secretKey(id));
     await this.save(removeAccount(this.list(), id));
+  }
+
+  /** Removes all accounts and cleans up their secrets. */
+  async clear(): Promise<void> {
+    for (const a of this.list()) await this.context.secrets.delete(secretKey(a.id));
+    await this.save([]);
   }
 
   /** Azure DevOps organizations of the account. */

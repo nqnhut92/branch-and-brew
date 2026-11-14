@@ -17,10 +17,10 @@ async function api(): Promise<TestApi> {
 }
 
 /** Waits for a value that a globalState write makes visible; VS Code persists it, so a read can lag. */
-async function until<T>(get: () => T | undefined | false, timeoutMs = 5_000): Promise<T> {
+async function until<T>(get: () => T | Promise<T> | undefined | false, timeoutMs = 5_000): Promise<T> {
   const start = Date.now();
   for (;;) {
-    const value = get();
+    const value = await get();
     if (value) return value;
     if (Date.now() - start > timeoutMs) throw new Error(`timed out after ${timeoutMs} ms`);
     await new Promise((r) => setTimeout(r, 50));
@@ -35,7 +35,7 @@ suite('Accounts and clone (stub hosts)', () => {
 
   suiteSetup(async () => {
     const { accounts, setGitEnv } = await api();
-    for (const a of accounts.list()) await accounts.remove(a.id); // left by a run that was killed
+    await accounts.clear(); // left by a run that was killed
     // No stored credentials: the machine's credential helpers (keychain, Credential Manager)
     // are out of the picture, so only the extension can answer git.
     writeFileSync(path.join(root, 'empty-gitconfig'), '');
@@ -43,8 +43,9 @@ suite('Accounts and clone (stub hosts)', () => {
   });
 
   suiteTeardown(async () => {
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     const { accounts, setGitEnv, store } = await api();
-    for (const a of accounts.list()) await accounts.remove(a.id);
+    await accounts.clear();
     accounts.overrides = {};
     setGitEnv({});
     await store.update((l) => ({ ...l, repos: l.repos.filter((r) => !pathKey(r.path).startsWith(pathKey(root))) }));
@@ -73,6 +74,7 @@ suite('Accounts and clone (stub hosts)', () => {
     // Without an account nobody can answer: stop that clone instead of typing into its prompt.
     // (The prompt is a VS Code input box, which a test cannot fill in; this just proves the host is private.)
     const account = await accounts.addGeneric({ host: `http://${server.host}/`, username: 'nick', token: 'tok-123' });
+    await until(() => accounts.list().some((a) => a.id === account.id));
     assert.strictEqual(account.host, server.host);
     assert.strictEqual(await accounts.token(account), 'tok-123');
     assert.ok(!JSON.stringify(accounts.list()).includes('tok-123'), 'the token is not in the account list');
@@ -112,7 +114,9 @@ suite('Accounts and clone (stub hosts)', () => {
     assert.strictEqual(state.status?.behind, 1);
 
     // A wrong token fails the clone with git's error; it neither hangs nor asks.
-    await accounts.addGeneric({ host: server.host, username: 'nick', token: 'wrong' });
+    const wrong = await accounts.addGeneric({ host: server.host, username: 'nick', token: 'wrong' });
+    await until(() => accounts.list().some((a) => a.id === wrong.id && a.host === server!.host));
+    await until(async () => (await accounts.token(wrong)) === 'wrong');
     assert.strictEqual(accounts.list().filter((a) => a.host === server!.host).length, 1, 'one account per host');
     mkdirSync(path.join(root, 'denied'));
     await assert.rejects(cloneInto(url, path.join(root, 'denied')), /Authentication failed|403|401/i);
@@ -160,8 +164,8 @@ suite('Accounts and clone (stub hosts)', () => {
     assert.deepStrictEqual(repos.map((r) => [r.name, r.private]), [['octo-nick/private-tool', true], ['octo-nick/site', false]]);
 
     // Git's prompts for github.com are answered from the session, silently.
-    assert.strictEqual(await accounts.answer("Username for 'https://github.com': "), 'octo-nick');
-    assert.strictEqual(await accounts.answer("Password for 'https://octo-nick@github.com': "), 'gho_session');
+    assert.strictEqual(await until(() => accounts.answer("Username for 'https://github.com': ")), 'octo-nick');
+    assert.strictEqual(await until(() => accounts.answer("Password for 'https://octo-nick@github.com': ")), 'gho_session');
     assert.deepStrictEqual(requested[requested.length - 1].options, { silent: true });
     assert.strictEqual(await accounts.answer("Password for 'https://gitlab.com': "), undefined);
     assert.strictEqual(await accounts.answer("Enter passphrase for key '/x/id_ed25519': "), undefined);

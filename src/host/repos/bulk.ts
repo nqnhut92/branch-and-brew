@@ -4,6 +4,7 @@ import { pull } from '../../core/git/ops';
 import { getStatus } from '../../core/git/status';
 import { summarizePull, type PullOutcome } from '../../core/repos/describe';
 import { mapLimit } from '../../core/repos/pool';
+import { LogPanel } from '../panels/logPanel';
 import type { RepoStates } from './state';
 
 export const VIEW_ID = 'branchAndBrew.repos';
@@ -31,6 +32,7 @@ export async function pullAll(repos: string[], states: RepoStates, env: Record<s
         } finally {
           states.setBusy(repo, undefined);
           void states.refresh(repo);
+          LogPanel.refreshRepo(repo);
           progress.report({ message: `${++done} of ${repos.length}` });
         }
       });

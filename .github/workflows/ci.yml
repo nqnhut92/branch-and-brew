@@ -45,13 +45,14 @@ jobs:
       - name: Download VS Code (with retries)
         run: node .github/scripts/download-vscode.mjs stable 1.90.0
       - name: Integration tests (VS Code stable)
-        run: xvfb-run -a npm run test:integration
+        run: rm -rf .vscode-test/user-data && xvfb-run -a npm run test:integration
       - name: Integration tests (minimum supported VS Code)
-        run: xvfb-run -a npm run test:integration
+        run: rm -rf .vscode-test/user-data && xvfb-run -a npm run test:integration
         env:
           VSCODE_TEST_VERSION: 1.90.0
       - name: Integration tests against the packaged .vsix
         run: |
+          rm -rf .vscode-test/user-data
           unzip -q "$(ls *.vsix)" -d packaged
           node esbuild.mjs --tests
           VSCODE_TEST_EXTENSION_PATH="$PWD/packaged/extension" xvfb-run -a npx vscode-test

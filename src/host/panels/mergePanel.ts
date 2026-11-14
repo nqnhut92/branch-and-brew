@@ -1,11 +1,12 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import * as ops from '../../core/git/ops';
 import { saveResult, type ConflictFile, type TextMerge } from '../../core/merge/stages';
 import { pathKey } from '../../core/repos/model';
 import type {
   MergeInit, MergeMethods, MergePerform, MergeState, MergeWebviewToHost, RpcResponse,
 } from '../../shared/protocol';
-import type { Deps } from '../repos/commands';
+import { act, type Deps } from '../repos/commands';
 import { renderWebview, webviewOptions } from './webviewHtml';
 
 /** Column titles. In a rebase git's "ours" is the branch being rebased onto, so the words change. */
@@ -18,6 +19,16 @@ function labels(rebasing: boolean): MergeInit['labels'] {
 /** The three-pane merge editor for one conflicted text file. One panel per file. */
 export class MergePanel implements vscode.Disposable {
   private static readonly panels = new Map<string, MergePanel>();
+
+  static closeAllForRepo(repo: string): void {
+    const prefix = `${pathKey(repo)}\0`;
+    for (const [key, panel] of MergePanel.panels) {
+      if (key.startsWith(prefix)) {
+        panel.closing = 'saved';
+        panel.dispose();
+      }
+    }
+  }
 
   static open(deps: Deps, repo: string, file: ConflictFile, merge: TextMerge, onSaved?: () => void): MergePanel {
     const key = `${pathKey(repo)}\0${file.path}`;
@@ -100,6 +111,18 @@ export class MergePanel implements vscode.Disposable {
       const rebasing = this.deps.states.get(this.repo).status?.operation === 'rebase';
       const applyNonConflicting = vscode.workspace.getConfiguration('branchAndBrew').get('merge.applyNonConflictingChanges', true);
       return { path: this.file.path, labels: labels(rebasing), base, mine, theirs, chunks, applyNonConflicting } satisfies MergeInit;
+    }
+    if (method === 'abort') {
+      const ok = await vscode.window.showWarningMessage(
+        `Abort merge in ${path.basename(this.repo)}? This will discard all merge changes and reset to HEAD.`,
+        { modal: true },
+        'Abort Merge',
+      );
+      if (ok !== 'Abort Merge') return false;
+      await act(this.deps, this.repo, 'aborting merge', () => ops.abortMerge(this.repo));
+      MergePanel.closeAllForRepo(this.repo);
+      void this.deps.states.refresh(this.repo);
+      return true;
     }
     const { lines, unresolved } = params as MergeMethods['save']['params'];
     if (unresolved > 0) {

@@ -7,10 +7,10 @@ import * as ops from '../../core/git/ops';
 import { changedFiles, getCommitDetail, type FileChange } from '../../core/git/show';
 import { getStatus } from '../../core/git/status';
 import { listConflicts } from '../../core/merge/stages';
-import type { CommitAction, FileActionParams } from '../../shared/protocol';
+import type { BranchAction, CommitAction, FileActionParams } from '../../shared/protocol';
 import { blameUri, emptyUri, revisionUri } from '../gitContent';
 import { identityOk } from '../identityWarning';
-import { resolveFile, takeWhole } from '../merge/commands';
+import { resolveConflicts, resolveFile, takeWhole } from '../merge/commands';
 import { interactiveRebaseFrom, rebaseOnto } from '../rebase/commands';
 import { act, repoName, type Deps } from '../repos/commands';
 
@@ -194,6 +194,146 @@ export async function runFileAction(
       if (!ok) return false;
       await act(deps, repo, 'discarding', () => discard(repo, change));
       return true;
+    }
+  }
+}
+
+/** Runs one item of the branch menu. True when the repository may have changed. */
+export async function runBranchAction(deps: Deps, repo: string, action: BranchAction, branchName: string): Promise<boolean> {
+  const branches = await ops.listBranches(repo);
+  const target = branches.find((b) => b.name === branchName);
+  if (!target) return false;
+  const current = branches.find((b) => b.current);
+  switch (action) {
+    case 'switch': {
+      if (target.current) return true;
+      if (target.remote) {
+        const defaultLocal = target.name.slice(target.name.indexOf('/') + 1);
+        const existingLocal = branches.find((b) => !b.remote && b.name === defaultLocal);
+        if (existingLocal) {
+          if (existingLocal.current) {
+            void vscode.window.showInformationMessage(`Already on local branch "${defaultLocal}".`);
+            return false;
+          }
+          const choice = await vscode.window.showInformationMessage(
+            `Local branch "${defaultLocal}" already exists. Switch to it?`,
+            'Switch',
+          );
+          if (choice === 'Switch') {
+            await act(
+              deps,
+              repo,
+              `switching to ${existingLocal.name}`,
+              (stream) => ops.switchBranch(repo, existingLocal, stream),
+              `git switch ${existingLocal.name}`,
+            );
+            return true;
+          }
+          return false;
+        }
+
+        const enteredName = await vscode.window.showInputBox({
+          title: `Checkout ${target.name}`,
+          prompt: `Create and checkout a local tracking branch`,
+          value: defaultLocal,
+          validateInput: async (v) => (!v.trim() || await ops.isValidBranchName(repo, v.trim()) ? undefined : 'Not a valid branch name'),
+        });
+        if (!enteredName?.trim()) return false;
+        await act(
+          deps,
+          repo,
+          `checking out ${enteredName.trim()}`,
+          (stream) => ops.git(repo, ['switch', '--track', '-c', enteredName.trim(), target.name], stream),
+          `git switch --track -c ${enteredName.trim()} ${target.name}`,
+        );
+        return true;
+      }
+
+      await act(
+        deps,
+        repo,
+        `switching to ${target.name}`,
+        (stream) => ops.switchBranch(repo, target, stream),
+        `git switch ${target.name}`,
+      );
+      return true;
+    }
+    case 'merge': {
+      if (!current) {
+        void vscode.window.showWarningMessage(`${repoName(repo)}: HEAD is detached; cannot merge.`);
+        return false;
+      }
+      if (!await identityOk(deps, repo)) return false;
+      const ok = await vscode.window.showWarningMessage(
+        `Merge branch "${target.name}" into "${current.name}"?`,
+        { modal: true },
+        'Merge',
+      );
+      if (!ok) return false;
+      await act(
+        deps,
+        repo,
+        `merging ${target.name}`,
+        async (stream) => {
+          try {
+            const res = await ops.merge(repo, target.name, stream);
+            if (res.includes('Already up to date')) {
+              void vscode.window.showInformationMessage(`Branch "${current.name}" is already up to date with "${target.name}".`);
+            }
+          } catch (e) {
+            const s = await getStatus(repo).catch(() => undefined);
+            if (s?.conflicted) {
+              const resolve = 'Resolve Conflicts';
+              void vscode.window.showWarningMessage(
+                `Merge into "${current.name}" resulted in ${s.conflicted} conflict(s).`,
+                resolve,
+              ).then((choice) => {
+                if (choice === resolve) void resolveConflicts(deps, repo);
+              });
+              return;
+            }
+            throw e;
+          }
+        },
+        `git merge ${target.name}`,
+      );
+      return true;
+    }
+    case 'rebase': {
+      if (!current || target.current) return false;
+      return rebaseOnto(deps, repo, target.name);
+    }
+    case 'delete': {
+      if (target.current) return false;
+      const ok = await vscode.window.showWarningMessage(
+        `Delete branch "${target.name}"?`,
+        { modal: true },
+        'Delete Branch',
+      );
+      if (!ok) return false;
+      let deleted = false;
+      await act(deps, repo, `deleting branch ${target.name}`, async () => {
+        try {
+          await ops.deleteBranch(repo, target.name, false);
+          deleted = true;
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (msg.includes('not fully merged')) {
+            const force = await vscode.window.showWarningMessage(
+              `Branch "${target.name}" is not fully merged. Force delete?`,
+              { modal: true },
+              'Force Delete',
+            );
+            if (force === 'Force Delete') {
+              await ops.deleteBranch(repo, target.name, true);
+              deleted = true;
+            }
+            return;
+          }
+          throw e;
+        }
+      });
+      return deleted;
     }
   }
 }

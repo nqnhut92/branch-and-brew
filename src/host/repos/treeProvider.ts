@@ -82,6 +82,11 @@ export class RepoTreeProvider implements vscode.TreeDataProvider<Node>, vscode.D
     const item = new vscode.TreeItem(path.basename(repo), vscode.TreeItemCollapsibleState.None);
     item.id = `repo:${pathKey(repo)}`;
     item.resourceUri = vscode.Uri.file(repo);
+    item.command = {
+      command: 'branchAndBrew.showLog',
+      title: 'Show Log',
+      arguments: [{ kind: 'repo', path: repo }],
+    };
     const kind = rowState(state.status, state.error);
     const mark = this.extras.mark?.(repo);
     item.description = (state.busy ? `${state.busy}…` : state.error ? 'not available' : state.status ? describeStatus(state.status) : 'loading…')
@@ -96,7 +101,8 @@ export class RepoTreeProvider implements vscode.TreeDataProvider<Node>, vscode.D
         error: new vscode.ThemeIcon('error', new vscode.ThemeColor('errorForeground')),
       }[kind];
     const kinds = this.extras.kinds?.(repo) ?? [];
-    item.contextValue = ['repo', ...(kind === 'conflict' ? ['conflict'] : []), ...kinds].join(' ');
+    const isMerge = state.status?.operation === 'merge';
+    item.contextValue = ['repo', ...(kind === 'conflict' ? ['conflict'] : []), ...(isMerge ? ['merge'] : []), ...kinds].join(' ');
     item.tooltip = this.tooltip(repo);
     return item;
   }

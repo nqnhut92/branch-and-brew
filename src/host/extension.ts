@@ -59,6 +59,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<TestAp
   const mavenStatus = new MavenStatus();
   const deps = {
     store, states, networkEnv: () => ({ ...networkEnv, ...extraGitEnv }), extensionUri: context.extensionUri,
+    extensionMode: context.extensionMode,
     projectKinds: (repo: string) => detectProjectKinds(repo),
     terminalEnv: (repo: string) => (detectProjectKinds(repo).includes('maven') ? java.env(repo) : {}),
   };

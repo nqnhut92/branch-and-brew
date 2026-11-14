@@ -2,7 +2,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { isStaged, isUnstaged } from '../../core/git/changeState';
 import type { CommitDetail, FileAction, WorkingChange } from '../../shared/protocol';
 import { isMenuKey } from '../ui/ContextMenu';
-import { changeLetters, formatDate } from './format';
+import { changeLetters, formatFullDate, formatPerson } from './format';
 
 export interface FileRow {
   path: string;
@@ -52,19 +52,69 @@ function FileList({ files, onFile, onMenu, buttons }: {
   );
 }
 
-/** Detail area for a commit: who, when, the full message, and its changed files. */
-export function CommitDetailView({ detail, onFile, onMenu }: { detail: CommitDetail; onFile: OnFile; onMenu: OnFileMenu }) {
+/** Detail area for a commit: who, when, the full message, and its changed files, styled like SourceTree. */
+export function CommitDetailView({
+  detail, labels = [], onFile, onMenu,
+}: {
+  detail: CommitDetail;
+  labels?: string[];
+  onFile: OnFile;
+  onMenu: OnFileMenu;
+}) {
   const files = detail.files.map((f): FileRow => ({ path: f.path, oldPath: f.oldPath, letters: f.status }));
+  const lines = detail.message.split('\n');
+  const subject = lines[0] ?? '';
+  const body = lines.slice(1).join('\n').trim();
+  const initial = (detail.author || '?').trim()[0].toUpperCase();
+  const cleanLabels = labels.map((l) => l.replace(/^HEAD -> /, '').replace(/^tag: /, ''));
+
   return (
     <section className="detail">
       <div className="info">
-        <dl>
-          <dt>Commit</dt><dd className="hash">{detail.hash}</dd>
-          <dt>Author</dt><dd>{detail.author} &lt;{detail.email}&gt;</dd>
-          <dt>Date</dt><dd>{formatDate(detail.date)}</dd>
-          {detail.parents.length > 1 && <><dt>Parents</dt><dd className="hash">{detail.parents.map((p) => p.slice(0, 8)).join(', ')}</dd></>}
+        <div className="commit-header">
+          <div className="commit-avatar" title={detail.author}>{initial}</div>
+          <div className="commit-subject">{subject}</div>
+        </div>
+        <dl className="commit-meta">
+          <dt>Commit:</dt>
+          <dd className="hash">
+            {detail.hash} <span className="short-hash">[{detail.hash.slice(0, 7)}]</span>
+          </dd>
+          {detail.parents.length > 0 && (
+            <>
+              <dt>Parents:</dt>
+              <dd className="parents">
+                {detail.parents.map((p, idx) => (
+                  <span key={p} className="parent-link" title={p}>
+                    {idx > 0 && ' '}
+                    {p.slice(0, 10)}
+                  </span>
+                ))}
+              </dd>
+            </>
+          )}
+          <dt>Author:</dt>
+          <dd>{formatPerson(detail.author, detail.email)}</dd>
+          {(detail.committer && (detail.committer !== detail.author || detail.committerEmail !== detail.email)) ? (
+            <>
+              <dt>Committer:</dt>
+              <dd>{formatPerson(detail.committer, detail.committerEmail)}</dd>
+            </>
+          ) : null}
+          <dt>Date:</dt>
+          <dd>{formatFullDate(detail.date)}</dd>
+          {cleanLabels.length > 0 && (
+            <>
+              <dt>Labels:</dt>
+              <dd className="labels">
+                {cleanLabels.map((l) => (
+                  <span key={l} className="label-badge">{l}</span>
+                ))}
+              </dd>
+            </>
+          )}
         </dl>
-        <pre className="body">{detail.message}</pre>
+        {body && <pre className="body">{body}</pre>}
       </div>
       <div className="changed">
         <h2>{files.length} changed {files.length === 1 ? 'file' : 'files'}{detail.parents.length > 1 ? ' (against the first parent)' : ''}</h2>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRepo } from '../../../test/fixtures/repos';
 import { getStatus } from './status';
 import {
-  GitCommandError, createBranch, fetch, isValidBranchName, listBranches, pull, push, stash, stashCount, stashPop, switchBranch,
+  GitCommandError, createBranch, fetch, isValidBranchName, listBranches, merge, pull, push, stash, stashCount, stashPop, switchBranch,
 } from './ops';
 
 /** A bare "remote" plus a clone of it, both throwaway. */
@@ -70,5 +70,17 @@ describe('git operations', () => {
       await stashPop(clone.dir);
       expect((await getStatus(clone.dir)).changed).toBe(1);
     } finally { dispose(); }
+  });
+
+  it('merges a branch into the current one', async () => {
+    const repo = await createRepo('merge-test');
+    try {
+      await repo.commit('Base', { 'file.txt': 'base\n' });
+      await repo.git('branch', 'feature');
+      await repo.commit('Main change', { 'main.txt': 'main\n' });
+      await merge(repo.dir, 'feature');
+      expect((await getStatus(repo.dir)).operation).toBeUndefined();
+      expect((await getStatus(repo.dir)).conflicted).toBe(0);
+    } finally { repo.dispose(); }
   });
 });
