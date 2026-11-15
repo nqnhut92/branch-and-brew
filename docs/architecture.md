@@ -48,5 +48,5 @@ Three menus, one per thing the user right-clicks. Repository-row menus are nativ
 | Right-click on | Items |
 | --- | --- |
 | Repository row | Fetch, Pull, Push; Switch branch, New branch, Stash, Pop stash; Open (submenu); Git identity, Move to group, Remove from list; Show log; Interactive rebase; Maven (submenu, only with a `pom.xml`) |
-| Commit in the log | Checkout, Create branch or tag; Cherry-pick, Revert; Compare, Copy hash or message; Reset (soft, mixed, hard); Rebase onto this, Interactive rebase from here |
+| Commit in the log | Checkout, Create branch or tag; Cherry-pick, Revert; Compare, Copy hash or message; Rebase current branch onto this; Reset (soft, mixed, hard) |
 | File in a file list | Show diff, Open file, Stage, Unstage, Discard; History, Blame; for a conflicted file also Resolve, Take mine, Take theirs |

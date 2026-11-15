@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import { listBranches } from '../../core/git/refs';
 import { getCommitDetail } from '../../core/git/show';
-import { listRebaseCommits } from '../../core/rebase/session';
 import { RebasePanel } from '../panels/rebasePanel';
 import { repoName, type Deps } from '../repos/commands';
-import { confirmRebaseStart } from './confirm';
 
 const short = (hash: string) => (/^[0-9a-f]{40}$/i.test(hash) ? hash.slice(0, 8) : hash);
 
@@ -46,19 +44,9 @@ export async function interactiveRebaseFrom(deps: Deps, repo: string, hash: stri
     : { onto: null, label: 'the first commit' });
 }
 
-/** Log: `git rebase <hash>`. Opens the panel only when the rebase stops. True when it ran. */
+/** Log: Rebase onto `hash` or branch. Opens the interactive rebase table to prepare and start. */
 export async function rebaseOnto(deps: Deps, repo: string, hash: string): Promise<boolean> {
   if (await showRunning(deps, repo)) return false;
-  const commits = await listRebaseCommits(repo, hash);
-  const go = await confirmRebaseStart(deps, repo, commits[0]?.hash);
-  if (!go) return false;
-  const panel = RebasePanel.open(deps, repo, { onto: hash, label: short(hash) });
-  try {
-    const view = await panel.runPlain(hash, go.autostash);
-    if (view.phase === 'done') panel.dispose();
-  } catch (e) {
-    panel.dispose();
-    void vscode.window.showErrorMessage(`${repoName(repo)}: ${(e as Error).message}`);
-  }
-  return true;
+  RebasePanel.open(deps, repo, { onto: hash, label: short(hash) });
+  return false;
 }

@@ -132,10 +132,16 @@ suite('Interactive rebase', () => {
     assert.deepStrictEqual(plan.rows.map((r) => r.subject), ['Side one', 'Side two']);
     panel.dispose();
 
-    // "Rebase current branch onto this" on the tip of main: no conflict, so no panel stays open.
-    assert.strictEqual(await log.handle('commitAction', { action: 'rebaseOnto', hash: main }), true);
+    // "Rebase current branch onto this" on the tip of main: opens the rebase table with commits onto main.
+    assert.strictEqual(await log.handle('commitAction', { action: 'rebaseOnto', hash: main }), false);
+    const ontoPanel = openRebase(f.dir);
+    const ontoPlan = await ontoPanel.whenState((s) => s.phase === 'plan' && s.rows.length > 0);
+    assert.deepStrictEqual(ontoPlan.rows.map((r) => r.subject), ['Side one', 'Side two']);
+    ontoPanel.perform({ action: 'start' });
+    await ontoPanel.whenState((s) => s.phase === 'done');
     assert.deepStrictEqual((await f.git('log', '--format=%s')).split('\n'), ['Side two', 'Side one', 'Third', 'Second', 'First']);
     assert.strictEqual((await getStatus(f.dir)).operation, undefined);
+    ontoPanel.dispose();
     log.dispose();
   });
 });

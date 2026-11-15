@@ -7,6 +7,7 @@ import type {
   RpcResponse,
 } from '../../shared/protocol';
 import type { Deps } from '../repos/commands';
+import { resolveConflicts } from '../merge/commands';
 import { renderWebview, webviewOptions } from './webviewHtml';
 
 export class BrewingPanel implements vscode.Disposable {
@@ -23,7 +24,7 @@ export class BrewingPanel implements vscode.Disposable {
   }
 
   private constructor(
-    deps: Deps,
+    private readonly deps: Deps,
     readonly repo: string,
     readonly title: string,
     readonly command: string,
@@ -99,6 +100,11 @@ export class BrewingPanel implements vscode.Disposable {
     }
     if (method === 'close') {
       this.panel.dispose();
+      return undefined as BrewingMethods[M]['result'];
+    }
+    if (method === 'resolveConflicts') {
+      this.panel.dispose();
+      await resolveConflicts(this.deps, this.repo);
       return undefined as BrewingMethods[M]['result'];
     }
     throw new Error(`unknown method ${String(method)}`);

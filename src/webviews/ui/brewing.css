@@ -118,32 +118,21 @@
   color: var(--vscode-descriptionForeground);
 }
 
-.brewing-cmd {
+.brewing-repo-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin-top: 2px;
 }
 
 .brewing-repo-badge {
   font-weight: 600;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   font-size: 11px;
-  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.2));
-  color: var(--vscode-badge-foreground, var(--vscode-foreground));
+  background: rgba(9, 105, 218, 0.12);
+  color: var(--vscode-foreground);
+  border: 1px solid rgba(9, 105, 218, 0.28);
   flex-shrink: 0;
-}
-
-.brewing-cmd code {
-  color: var(--vscode-textPreformat-foreground, #ce9178);
-  font-family: var(--vscode-editor-font-family, monospace);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Console Log */
@@ -152,7 +141,7 @@
   flex: 1;
   min-height: 220px;
   max-height: 400px;
-  background: var(--vscode-terminal-background, #18181b);
+  background: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background));
 }
 
 .brewing-console {
@@ -163,7 +152,11 @@
   font-family: var(--vscode-editor-font-family, 'Menlo', 'Monaco', 'Courier New', monospace);
   font-size: 12px;
   line-height: 1.5;
-  color: var(--vscode-terminal-foreground, #d4d4d4);
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 10px 12px;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -173,22 +166,32 @@
   font-style: italic;
 }
 
+.brewing-console .line-cmd {
+  font-weight: 600;
+  color: var(--vscode-editor-foreground, inherit);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .brewing-console .line-error {
-  color: var(--vscode-errorForeground, #f48771);
+  color: var(--vscode-errorForeground, #cf222e);
   font-weight: 500;
 }
 
 .brewing-console .line-warning {
-  color: var(--vscode-editorWarning-foreground, #cca700);
+  color: var(--vscode-editorWarning-foreground, #9a6700);
 }
 
 .brewing-console .line-success {
-  color: var(--vscode-charts-green, #89d185);
+  color: var(--vscode-charts-green, #1a7f37);
   font-weight: 500;
 }
 
 .brewing-console .line-progress {
-  color: var(--vscode-charts-blue, #75beff);
+  color: var(--vscode-charts-blue, #0969da);
 }
 
 /* Footer */

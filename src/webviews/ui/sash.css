@@ -1,0 +1,32 @@
+.sash {
+  position: relative;
+  z-index: 10;
+  transition: background 0.1s ease;
+  flex-shrink: 0;
+  background: transparent;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.sash.sash-col {
+  width: 4px !important;
+  min-width: 4px !important;
+  max-width: 4px !important;
+  cursor: col-resize;
+  border-left: 1px solid var(--vscode-panel-border);
+}
+
+.sash.sash-row {
+  height: 4px !important;
+  min-height: 4px !important;
+  max-height: 4px !important;
+  cursor: row-resize;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.sash:hover,
+.sash:active {
+  background: var(--vscode-focusBorder, #007fd4) !important;
+  border-color: transparent !important;
+}

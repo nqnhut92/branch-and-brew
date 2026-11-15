@@ -86,6 +86,8 @@ export interface LogMethods {
   fileAction: { params: FileActionParams; result: boolean };
   /** Drops the carried graph so the next page starts fresh, e.g. after a search that hid it. */
   resetGraph: { params: null; result: null };
+  /** Opens the conflict resolution flow (quick pick / 3-pane merge). */
+  resolveConflicts: { params: null; result: void };
 }
 
 /** Sent by the log webview after it has drawn a page; the integration tests read it. */
@@ -114,8 +116,20 @@ export interface LogGraphReset {
   kind: 'event';
   event: 'graphReset';
 }
+
+export interface LogBrewingEvent {
+  kind: 'event';
+  event: 'brewing';
+  action: 'start' | 'output' | 'finish';
+  title?: string;
+  command?: string;
+  chunk?: string;
+  status?: 'brewing' | 'success' | 'error';
+  error?: string;
+}
+
 export type LogWebviewToHost = RpcRequest | LogRendered;
-export type LogHostToWebview = RpcResponse | LogChanged | LogGraphReset;
+export type LogHostToWebview = RpcResponse | LogChanged | LogGraphReset | LogBrewingEvent;
 
 // ---- Merge panel ------------------------------------------------------------------------------
 
@@ -218,6 +232,9 @@ export interface RebaseMethods {
   /** Opens the list of conflicted files. */
   resolve: { params: null; result: null };
   diff: { params: { hash: string; path: string; oldPath?: string }; result: null };
+  open: { params: { path: string }; result: null };
+  amend: { params: { message?: string }; result: RebaseView };
+  close: { params: null; result: null };
 }
 
 /** Sent by the rebase webview after every change; the integration tests read it. */
@@ -273,6 +290,7 @@ export interface BrewingInit {
 export interface BrewingMethods {
   init: { params: null; result: BrewingInit };
   close: { params: null; result: void };
+  resolveConflicts: { params: null; result: void };
 }
 
 export interface BrewingOutputEvent {

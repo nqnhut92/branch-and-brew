@@ -8,9 +8,10 @@ import { MAX_SCOPE, defaultScope } from '../../core/git/scope';
 import { getCommitDetail } from '../../core/git/show';
 import { pathKey } from '../../core/repos/model';
 import type {
-  LogChanged, LogMethods, LogPage, LogRendered, LogWebviewToHost, RpcResponse,
+  LogBrewingEvent, LogChanged, LogMethods, LogPage, LogRendered, LogWebviewToHost, RpcResponse,
 } from '../../shared/protocol';
 import { runBranchAction, runCommitAction, runFileAction } from '../log/actions';
+import { resolveConflicts } from '../merge/commands';
 import type { Deps } from '../repos/commands';
 import { renderWebview, webviewOptions } from './webviewHtml';
 
@@ -49,6 +50,45 @@ export class LogPanel implements vscode.Disposable {
     }
   }
 
+  static forRepo(repo: string): LogPanel | undefined {
+    for (const panel of LogPanel.open_.values()) {
+      if (pathKey(panel.repo) === pathKey(repo) && !panel.file) {
+        return panel;
+      }
+    }
+    return undefined;
+  }
+
+  startBrewing(title: string, command: string): void {
+    void this.panel.webview.postMessage({
+      kind: 'event',
+      event: 'brewing',
+      action: 'start',
+      title,
+      command,
+      status: 'brewing',
+    } satisfies LogBrewingEvent);
+  }
+
+  appendBrewingOutput(chunk: string): void {
+    void this.panel.webview.postMessage({
+      kind: 'event',
+      event: 'brewing',
+      action: 'output',
+      chunk,
+    } satisfies LogBrewingEvent);
+  }
+
+  finishBrewing(status: 'success' | 'error', error?: string): void {
+    void this.panel.webview.postMessage({
+      kind: 'event',
+      event: 'brewing',
+      action: 'finish',
+      status,
+      error,
+    } satisfies LogBrewingEvent);
+  }
+
   refresh(): void {
     void this.deps.states.refresh(this.repo);
     void this.panel.webview.postMessage({ kind: 'event', event: 'changed' } satisfies LogChanged);
@@ -66,7 +106,10 @@ export class LogPanel implements vscode.Disposable {
   private constructor(private readonly deps: Deps, readonly repo: string, readonly file: string | undefined, onDispose: () => void) {
     const name = path.basename(repo);
     const title = file ? `History: ${path.basename(file)} — ${name}` : `Log: ${name}`;
-    this.panel = vscode.window.createWebviewPanel('branchAndBrew.log', title, vscode.ViewColumn.Active, webviewOptions(deps.extensionUri));
+    this.panel = vscode.window.createWebviewPanel('branchAndBrew.log', title, vscode.ViewColumn.Active, {
+      ...webviewOptions(deps.extensionUri),
+      retainContextWhenHidden: true,
+    });
     this.subscriptions.push(
       this.panel.webview.onDidReceiveMessage((msg: LogWebviewToHost) => void this.receive(msg)),
       this.panel.onDidDispose(() => {
@@ -176,6 +219,9 @@ export class LogPanel implements vscode.Disposable {
     commitAction: ({ action, hash }) => runCommitAction(this.deps, this.repo, action, hash),
     branchAction: ({ action, branch }) => runBranchAction(this.deps, this.repo, action, branch),
     fileAction: (params) => runFileAction(this.deps, this.repo, params, (file) => LogPanel.open(this.deps, this.repo, file)),
+    resolveConflicts: async () => {
+      await resolveConflicts(this.deps, this.repo);
+    },
   };
 
   /** Resolves with the webview's next report that it has drawn a page (tests). */

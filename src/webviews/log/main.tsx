@@ -3,13 +3,15 @@ import { createRoot } from 'react-dom/client';
 import { isStaged, isUnstaged } from '../../core/git/changeState';
 import { onlyCurrent, toggleScope } from '../../core/git/scope';
 import type {
-  BranchAction, BranchInfo, Commit, CommitAction, CommitDetail, FileAction, LaneRow, LogInit, LogMethods, LogRendered, WorkingChange,
+  BranchAction, BranchInfo, Commit, CommitAction, CommitDetail, FileAction, LaneRow, LogBrewingEvent, LogInit, LogMethods, LogRendered, WorkingChange,
 } from '../../shared/protocol';
 import { ContextMenu, type MenuItem, type MenuRequest } from '../ui/ContextMenu';
+import { BrewingDialog } from '../ui/BrewingDialog';
 import { createClient, onHostEvent, pageErrors, vscodeApi } from '../ui/rpc';
 import { BranchList } from './BranchList';
 import { CommitTable, UNCOMMITTED } from './CommitTable';
 import { CommitDetailView, WorkingTreeView, type FileRow } from './Detail';
+import { Sash, useDragResize } from '../ui/Sash';
 import '../ui/base.css';
 import './log.css';
 
@@ -25,7 +27,7 @@ interface Loaded {
 }
 
 /** What survives the panel being hidden and shown again. */
-interface Saved { scope?: string[]; search?: string; scroll?: number }
+interface Saved { scope?: string[]; search?: string; scroll?: number; branch?: string }
 
 function App() {
   const saved = useRef((vscodeApi.getState() as Saved | undefined) ?? {});
@@ -42,6 +44,13 @@ function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<CommitDetail | null>(null);
   const [menu, setMenu] = useState<MenuRequest | null>(null);
+  const [brewing, setBrewing] = useState<{
+    title: string;
+    command: string;
+    status: 'brewing' | 'success' | 'error';
+    output: string;
+    error?: string;
+  } | null>(null);
 
   /** Bumped on every reload so answers to older requests are dropped. */
   const generation = useRef(0);
@@ -51,10 +60,16 @@ function App() {
   const scrollRef = useRef(restoreScroll);
   const scopeRef = useRef(scope);
   const searchRef = useRef(search);
+  const currentBranchRef = useRef<string | undefined>(undefined);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const persist = useCallback(() => {
-    vscodeApi.setState({ scope: scopeRef.current, search: searchRef.current, scroll: scrollRef.current } satisfies Saved);
+    vscodeApi.setState({
+      scope: scopeRef.current,
+      search: searchRef.current,
+      scroll: scrollRef.current,
+      branch: currentBranchRef.current,
+    } satisfies Saved);
   }, []);
 
   /** Scrolling fires many times a second; the panel state is written once it settles. */
@@ -67,9 +82,16 @@ function App() {
   useEffect(() => {
     void request('init', null).then((i) => {
       const known = new Set(i.branches.map((b) => b.name));
-      const restored = saved.current.scope?.filter((s) => known.has(s) || s === 'HEAD') ?? [];
+      const cur = i.branches.find((b) => b.current)?.name;
+      currentBranchRef.current = cur;
       setBranches(i.branches);
-      setScope(restored.length ? restored : i.scope);
+      const branchChanged = saved.current.branch && cur && saved.current.branch !== cur;
+      const restored = !branchChanged && saved.current.scope
+        ? saved.current.scope.filter((s) => known.has(s) || s === 'HEAD')
+        : [];
+      const nextScope = restored.length ? restored : (cur ? [cur] : i.scope);
+      setScope(nextScope);
+      scopeRef.current = nextScope;
       setInit(i);
     });
   }, []);
@@ -136,18 +158,52 @@ function App() {
       const known = new Set(list.map((b) => b.name));
       const cur = list.find((b) => b.current)?.name;
       setScope((s) => {
+        const prevCur = currentBranchRef.current;
+        currentBranchRef.current = cur;
+        if (prevCur && cur && prevCur !== cur) {
+          scopeRef.current = [cur];
+          persist();
+          return [cur];
+        }
         const kept = s.filter((name) => known.has(name) || (name === 'HEAD' && !cur));
         if (kept.length !== s.length) {
-          if (kept.length) return kept;
-          return cur ? [cur] : ['HEAD'];
+          const next = kept.length ? kept : (cur ? [cur] : ['HEAD']);
+          scopeRef.current = next;
+          persist();
+          return next;
         }
         return s;
       });
     }).catch(() => undefined);
     void reload();
-  }, [reload]);
+  }, [reload, persist]);
 
-  useEffect(() => onHostEvent((e) => { if (e.event === 'changed') refresh(); }), [refresh]);
+  useEffect(() => {
+    return onHostEvent((raw) => {
+      const e = raw as unknown as { event: string; [key: string]: unknown };
+      if (e.event === 'changed') {
+        refresh();
+      } else if (e.event === 'brewing') {
+        const b = e as unknown as LogBrewingEvent;
+        if (b.action === 'start') {
+          setBrewing({
+            title: b.title ?? 'Brewing',
+            command: b.command ?? '',
+            status: 'brewing',
+            output: '',
+          });
+        } else if (b.action === 'output') {
+          setBrewing((prev) => (prev ? { ...prev, output: prev.output + (b.chunk ?? '') } : null));
+        } else if (b.action === 'finish') {
+          setBrewing((prev) => (prev ? {
+            ...prev,
+            status: b.status ?? 'success',
+            error: b.error,
+          } : null));
+        }
+      }
+    });
+  }, [refresh]);
 
   // Detail of the selected commit.
   useEffect(() => {
@@ -183,15 +239,27 @@ function App() {
   }, [refresh]);
 
   const branchAction = useCallback(async (action: BranchAction, branch: string) => {
+    const localName = branch.startsWith('origin/') ? branch.slice('origin/'.length) : branch;
+    if (action === 'switch') {
+      currentBranchRef.current = localName;
+      setScope([localName]);
+      scopeRef.current = [localName];
+      scrollRef.current = 0;
+      persist();
+    }
     const ok = await request('branchAction', { action, branch }).catch(() => false);
     if (ok) {
       if (action === 'switch') {
-        const localName = branch.startsWith('origin/') ? branch.slice('origin/'.length) : branch;
+        currentBranchRef.current = localName;
         setScope([localName]);
+        scopeRef.current = [localName];
+        persist();
       }
       refresh();
+    } else if (action === 'switch') {
+      refresh();
     }
-  }, [refresh]);
+  }, [refresh, persist]);
 
   const fileAction = useCallback(async (action: FileAction, file: FileRow) => {
     const hash = selected === UNCOMMITTED ? null : selected;
@@ -217,7 +285,6 @@ function App() {
         item('Copy Message', 'copyMessage'),
         'separator',
         item('Rebase Current Branch onto This', 'rebaseOnto'),
-        item('Interactive Rebase from Here…', 'rebaseInteractive'),
         'separator',
         item('Reset Current Branch to Here…', 'reset'),
       ],
@@ -281,31 +348,47 @@ function App() {
     refresh();
   }, [refresh]);
 
+  const [sidebarWidth, onResizeSidebar] = useDragResize(230, 'bnb.log.sidebarWidth', 160, 600, false);
+  const [detailHeight, onResizeDetail] = useDragResize(240, 'bnb.log.detailHeight', 120, 700, true);
+
   if (!init) return <p className="muted pad">Loading…</p>;
   const filtered = !!search || !!init.path;
   const lost = !filtered && loaded.commits.length > 0 && !loaded.rows;
   return (
-    <div className={`log${init.path ? ' no-branches' : ''}`}>
+    <div
+      className={`log${init.path ? ' no-branches' : ''}`}
+      style={{
+        gridTemplateColumns: init.path ? 'minmax(0, 1fr)' : `${sidebarWidth}px auto minmax(0, 1fr)`,
+      }}
+    >
       {!init.path && (
-        <BranchList
-          branches={branches} scope={scope} maxScope={init.maxScope}
-          onToggle={(name) => setScope((s) => {
-            const cur = branches.find((b) => b.current)?.name;
-            const resolved = s.map((b) => (b === 'HEAD' && cur ? cur : b));
-            return toggleScope(resolved, name);
-          })}
-          onOnlyCurrent={() => setScope(onlyCurrent(branches))}
-          onMenu={openBranchMenu}
-          onSwitch={(name) => {
-            const cur = branches.find((b) => b.current)?.name;
-            if (cur === name) {
-              setScope([name]);
-              refresh();
-              return;
-            }
-            void branchAction('switch', name);
-          }}
-        />
+        <>
+          <BranchList
+            branches={branches} scope={scope} maxScope={init.maxScope}
+            onToggle={(name) => setScope((s) => {
+              const cur = branches.find((b) => b.current)?.name;
+              const resolved = s.map((b) => (b === 'HEAD' && cur ? cur : b));
+              return toggleScope(resolved, name);
+            })}
+            onOnlyCurrent={() => setScope(onlyCurrent(branches))}
+            onMenu={openBranchMenu}
+            onSwitch={(name) => {
+              const localName = name.startsWith('origin/') ? name.slice('origin/'.length) : name;
+              const cur = branches.find((b) => b.current)?.name;
+              if (cur === name || cur === localName) {
+                currentBranchRef.current = localName;
+                setScope([localName]);
+                scopeRef.current = [localName];
+                scrollRef.current = 0;
+                persist();
+                refresh();
+                return;
+              }
+              void branchAction('switch', name);
+            }}
+          />
+          <Sash orientation="vertical" onMouseDown={(e) => onResizeSidebar(e, 'vertical')} title="Drag to resize branch sidebar" />
+        </>
       )}
       <main>
         <div className="toolbar">
@@ -338,22 +421,48 @@ function App() {
           </button>
         </div>
         {init.path && <div className="muted pad">History of {init.path}</div>}
-        <CommitTable
-          commits={loaded.commits} rows={loaded.rows} uncommitted={filtered ? 0 : changes.length}
-          selected={selected} onSelect={setSelected} onMenu={openCommitMenu} onNearEnd={loadMore}
-          restoreScroll={restoreScroll} hasMore={!loaded.done} onScrollTop={rememberScroll}
-          scope={scope} branches={branches}
-          empty={search
-            ? `No commit matches “${search}”.`
-            : init.path ? 'No commit touches this file.' : 'No commits in the selected branches.'}
-        />
-        {selected === UNCOMMITTED
-          ? <WorkingTreeView changes={changes} onFile={fileAction} onMenu={openFileMenu} />
-          : detail && selected === detail.hash
-            ? <CommitDetailView detail={detail} labels={loaded.commits.find((c) => c.hash === selected)?.refs} onFile={fileAction} onMenu={openFileMenu} />
-            : <section className="detail single"><p className="muted pad">Select a commit to see its message and files.</p></section>}
+        <div className="table-pane">
+          <CommitTable
+            commits={loaded.commits} rows={loaded.rows} uncommitted={filtered ? 0 : changes.length}
+            selected={selected} onSelect={setSelected} onMenu={openCommitMenu} onNearEnd={loadMore}
+            restoreScroll={restoreScroll} hasMore={!loaded.done} onScrollTop={rememberScroll}
+            scope={scope} branches={branches}
+            empty={search
+              ? `No commit matches “${search}”.`
+              : init.path ? 'No commit touches this file.' : 'No commits in the selected branches.'}
+          />
+        </div>
+        <Sash orientation="horizontal" onMouseDown={(e) => onResizeDetail(e, 'horizontal')} title="Drag to resize detail pane" />
+        <div className="detail-pane" style={{ height: `${detailHeight}px`, minHeight: '120px', flexShrink: 0 }}>
+          {selected === UNCOMMITTED
+            ? <WorkingTreeView changes={changes} onFile={fileAction} onMenu={openFileMenu} />
+            : detail && selected === detail.hash
+              ? <CommitDetailView detail={detail} labels={loaded.commits.find((c) => c.hash === selected)?.refs} onFile={fileAction} onMenu={openFileMenu} />
+              : <section className="detail single"><p className="muted pad">Select a commit to see its message and files.</p></section>}
+        </div>
       </main>
       {menu && <ContextMenu request={menu} onClose={closeMenu} />}
+      {brewing && (
+        <BrewingDialog
+          title={brewing.title}
+          repoName={init.name}
+          command={brewing.command}
+          status={brewing.status}
+          output={brewing.output}
+          error={brewing.error}
+          hasConflicts={
+            brewing.status === 'error' &&
+            (/^CONFLICT \(/m.test(brewing.output) ||
+              /Automatic merge failed/i.test(brewing.output) ||
+              /conflict/i.test(brewing.error ?? ''))
+          }
+          onClose={() => setBrewing(null)}
+          onResolveConflicts={async () => {
+            setBrewing(null);
+            await request('resolveConflicts', null).catch(() => undefined);
+          }}
+        />
+      )}
     </div>
   );
 }

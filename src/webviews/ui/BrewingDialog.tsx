@@ -27,9 +27,9 @@ export function BrewingDialog({
   const consoleRef = useRef<HTMLPreElement | null>(null);
   const [autoClose, setAutoClose] = useState(() => {
     try {
-      return localStorage.getItem('branchAndBrew.brewing.autoClose') !== 'false';
+      return localStorage.getItem('branchAndBrew.brewing.autoClose') === 'true';
     } catch {
-      return true;
+      return false;
     }
   });
   const [seconds, setSeconds] = useState(0);
@@ -73,6 +73,15 @@ export function BrewingDialog({
     const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const isConflicted =
+    status !== 'success' &&
+    (hasConflicts ??
+      (status === 'error' &&
+        (/^CONFLICT \(/m.test(output) ||
+          /Automatic merge failed/i.test(output) ||
+          /conflict/i.test(error ?? '')))) &&
+    !!onResolveConflicts;
 
   return (
     <div className="brewing-overlay" role="dialog" aria-modal="true" aria-label={title}>
@@ -156,21 +165,23 @@ export function BrewingDialog({
                 {formatTime(seconds)}
               </span>
             </div>
-            <div className="brewing-cmd" title={command}>
-              <span className="brewing-repo-badge">{repoName}</span>
-              <code>{command}</code>
-            </div>
+            {repoName && (
+              <div className="brewing-repo-row">
+                <span className="brewing-repo-badge">{repoName}</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Live Terminal Log */}
         <div className="brewing-console-wrapper">
           <pre ref={consoleRef} className="brewing-console">
+            {command && <div className="line line-cmd">{command}</div>}
             {output ? (
               output.split('\n').map((line, idx) => {
                 let lineClass = 'line';
-                if (/^(fatal|error):/i.test(line)) lineClass += ' line-error';
-                else if (/^(warning):/i.test(line)) lineClass += ' line-warning';
+                if (/^(remote:\s*)?(fatal|error):/i.test(line)) lineClass += ' line-error';
+                else if (/^(remote:\s*)?(warning):/i.test(line) || /^\s*\*\*/i.test(line)) lineClass += ' line-warning';
                 else if (/already up to date|fast-forward|switched to|merged/i.test(line)) lineClass += ' line-success';
                 else if (/^(\s*[\d]+%|counting|compressing|writing|enumerating)/i.test(line)) lineClass += ' line-progress';
                 return (
@@ -198,7 +209,7 @@ export function BrewingDialog({
           </label>
 
           <div className="brewing-actions">
-            {hasConflicts && onResolveConflicts && (
+            {isConflicted && (
               <button
                 type="button"
                 className="brewing-btn brewing-btn-primary"

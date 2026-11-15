@@ -55,7 +55,7 @@ const melds = (e: TodoEntry) => e.action === 'squash' || e.action === 'fixup';
 export function validateTodo(entries: readonly TodoEntry[], hasPrevious = false): string | undefined {
   let previous = hasPrevious;
   for (const e of entries) {
-    if (melds(e) && !previous) return `"${e.subject}" cannot be ${e.action}: there is no commit before it to combine with.`;
+    if (melds(e) && !previous) return `"${e.subject}" cannot be ${e.action}: there is no commit below it to combine with.`;
     if (kept(e) || melds(e)) previous = true;
   }
   if (!hasPrevious && entries.length && !entries.some((e) => kept(e) || e.action === 'other')) {

@@ -28,11 +28,11 @@ describe('scope', () => {
     expect(mainBranch([b('topic')])).toBeUndefined();
   });
 
-  it('defaults to the current branch, its upstream and main', () => {
+  it('defaults to the current branch only', () => {
     const branches = [b('topic', { current: true, upstream: 'origin/topic' }), b('origin/topic'), b('main'), b('other')];
-    expect(defaultScope(branches)).toEqual(['topic', 'origin/topic', 'main']);
+    expect(defaultScope(branches)).toEqual(['topic']);
     expect(defaultScope([b('main', { current: true })])).toEqual(['main']);
-    expect(defaultScope([b('main')])).toEqual(['HEAD', 'main']);
+    expect(defaultScope([b('main')])).toEqual(['HEAD']);
     expect(defaultScope([])).toEqual(['HEAD']);
   });
 

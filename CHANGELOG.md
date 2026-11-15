@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.0
 
-First complete version.
+First complete release.
 
 - **Repositories view**: add folders or scan a folder, groups, live status, fetch, pull, push, branches, stash, Open submenu, Pull all, Git identity and identity profiles per group, optional background fetch.
 - **Commit log**: graph table loaded 500 commits at a time, branch list and filter (up to six branches, Only current), search, detail area, uncommitted changes row, commit and file menus (checkout, branch, tag, cherry-pick, revert, reset, compare, history, blame).

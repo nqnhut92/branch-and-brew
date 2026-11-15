@@ -19,7 +19,7 @@ Destructive items (Remove from List, Discard, Reset hard, Drop, Abort) sit last 
 
 - Uncommitted changes are the first row, with stage, unstage and discard.
 - Double-click a file (or press Enter) to see its change in VS Code's diff editor.
-- Right-click a commit: checkout, create branch or tag, cherry-pick, revert, compare with the working tree or the previous commit, copy hash or message, reset (soft, mixed, hard), rebase current branch onto this, interactive rebase from here.
+- Right-click a commit: checkout, create branch or tag, cherry-pick, revert, compare with the working tree or the previous commit, copy hash or message, rebase current branch onto this, reset (soft, mixed, hard).
 - Right-click a file: show diff, open file, stage, unstage, discard, history of the file, blame.
 - From the keyboard, arrow keys move and the Menu key or Shift+F10 opens the menu.
 
@@ -41,7 +41,7 @@ Destructive items (Remove from List, Discard, Reset hard, Drop, Abort) sit last 
 - **Start Rebase** runs it. Whenever it pauses (a conflict, an `edit`, a message to write) the same table comes back with **Continue**, **Skip** and **Abort**, progress as step N of M, and the rows not yet applied still editable.
 - A conflict opens the conflict list and the three-pane merge.
 - Before the start, uncommitted changes can be stashed for the rebase's duration, and commits already on a remote branch get a warning.
-- From the log, **Interactive Rebase from Here** opens the table from that commit up to HEAD, and **Rebase Current Branch onto This** runs a plain rebase.
+- From the log, **Rebase Current Branch onto This** and the branch context menu **Rebase current branch onto…** directly open the interactive rebase table onto that target.
 - A rebase started in a terminal shows in the same panel.
 
 ## Java and Maven

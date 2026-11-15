@@ -2,7 +2,7 @@
   "name": "branch-and-brew",
   "displayName": "Branch and Brew",
   "description": "Multi-repository Git panel, TortoiseGit-style log and rebase, three-pane merge, and a Java/Maven toolchain.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "nqnhut92",
   "license": "MIT",
   "private": true,

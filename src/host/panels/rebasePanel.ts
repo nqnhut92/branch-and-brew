@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { git } from '../../core/git/ops';
 import { getCommitDetail } from '../../core/git/show';
 import { gitDir } from '../../core/git/status';
 import { pathKey } from '../../core/repos/model';
@@ -11,7 +12,7 @@ import type {
 } from '../../shared/protocol';
 import { runFileAction } from '../log/actions';
 import { resolveConflicts } from '../merge/commands';
-import type { Deps } from '../repos/commands';
+import { act, type Deps } from '../repos/commands';
 import { confirmRebaseStart } from '../rebase/confirm';
 import { renderWebview, webviewOptions } from './webviewHtml';
 
@@ -170,6 +171,9 @@ export class RebasePanel implements vscode.Disposable {
     const view = await this.view();
     if (outcome.phase === 'done') {
       void vscode.window.showInformationMessage(`Rebase of ${view.name} finished.`);
+      setTimeout(() => {
+        try { this.dispose(); } catch { /* ignore */ }
+      }, 300);
     } else if (outcome.phase === 'paused' && outcome.error && !view.pause?.conflicts) {
       // Not a conflict: git refused or stopped for another reason; say which.
       view.notice = this.notice = outcome.error;
@@ -246,7 +250,14 @@ export class RebasePanel implements vscode.Disposable {
       const ok = await vscode.window.showWarningMessage(
         `Abort the rebase of ${path.basename(this.repo)}? The branch goes back to where it was before the rebase started.`,
         { modal: true }, 'Abort Rebase');
-      return ok ? this.abortNow() : this.view();
+      if (ok) {
+        const v = await this.abortNow();
+        setTimeout(() => {
+          try { this.dispose(); } catch { /* ignore */ }
+        }, 300);
+        return v;
+      }
+      return this.view();
     },
 
     resolve: async () => {
@@ -256,6 +267,27 @@ export class RebasePanel implements vscode.Disposable {
 
     diff: async ({ hash, path: file, oldPath }) => {
       await runFileAction(this.deps, this.repo, { action: 'diff', hash, path: file, oldPath }, () => undefined);
+      return null;
+    },
+
+    open: async ({ path: file }) => {
+      await runFileAction(this.deps, this.repo, { action: 'open', hash: null, path: file }, () => undefined);
+      return null;
+    },
+
+    amend: async ({ message }) => {
+      await act(this.deps, this.repo, 'amending commit', async () => {
+        await git(this.repo, ['add', '-A']);
+        const args = ['commit', '--amend'];
+        if (message?.trim()) args.push('-m', message.trim());
+        else args.push('--no-edit');
+        await git(this.repo, args);
+      });
+      return this.drive(() => this.session.continue(undefined));
+    },
+
+    close: async () => {
+      try { this.dispose(); } catch { /* ignore */ }
       return null;
     },
   };

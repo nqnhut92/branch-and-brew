@@ -48,6 +48,7 @@ function App() {
       error={errorMsg}
       hasConflicts={/conflict/i.test(output) || /conflict/i.test(errorMsg ?? '')}
       onClose={() => void request('close', null)}
+      onResolveConflicts={() => void request('resolveConflicts', null)}
     />
   );
 }

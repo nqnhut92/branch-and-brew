@@ -1,10 +1,11 @@
 .muted { color: var(--vscode-descriptionForeground); }
 .pad { padding: 6px 10px; margin: 0; }
 
-.log { display: grid; grid-template-columns: 230px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; }
+.log { display: grid; grid-template-columns: 230px auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; }
 .log.no-branches { grid-template-columns: minmax(0, 1fr); }
-main { display: grid; grid-template-rows: auto auto minmax(0, 3fr) minmax(0, 2fr); min-width: 0; min-height: 0; }
-.log:not(.no-branches) main { grid-template-rows: auto minmax(0, 3fr) minmax(0, 2fr); }
+main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
+.table-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.detail-pane { min-height: 120px; flex-shrink: 0; display: flex; flex-direction: column; }
 
 /* Branch list */
 .branches {
@@ -275,11 +276,13 @@ main { display: grid; grid-template-rows: auto auto minmax(0, 3fr) minmax(0, 2fr
 .lane.c5 { stroke: var(--vscode-charts-yellow); }  .dot.c5 { fill: var(--vscode-charts-yellow); }
 
 /* Detail area */
-.detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; border-top: 1px solid var(--vscode-panel-border); }
-.detail.single { grid-template-columns: minmax(0, 1fr); }
-.detail > div { min-height: 0; padding: 10px 14px; overflow: auto; }
-.detail .changed { border-left: 1px solid var(--vscode-panel-border); }
-.detail.single .changed { border-left: 0; }
+.detail { display: flex; min-height: 0; height: 100%; border-top: 1px solid var(--vscode-panel-border); }
+.detail.single { display: flex; }
+.detail > .info,
+.detail > .changed { min-height: 0; padding: 10px 14px; overflow: auto; }
+.detail .info { flex-shrink: 0; }
+.detail .changed { flex: 1; min-width: 0; }
+.detail.single .changed { width: 100%; }
 
 .commit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .commit-avatar {

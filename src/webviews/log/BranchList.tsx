@@ -119,6 +119,17 @@ function FolderIcon() {
   );
 }
 
+function folderHasScope(node: BranchFolder, scope: string[]): boolean {
+  for (const child of node.children) {
+    if (child.kind === 'leaf') {
+      if (scope.includes(child.fullName) || (child.info.current && scope.includes('HEAD'))) return true;
+    } else if (folderHasScope(child, scope)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function BranchTreeNodes({
   nodes,
   depth,
@@ -126,6 +137,7 @@ function BranchTreeNodes({
   full,
   collapsed,
   isSearching,
+  isRemote,
   onToggleCollapse,
   onToggleScope,
   onSwitch,
@@ -135,9 +147,10 @@ function BranchTreeNodes({
   depth: number;
   scope: string[];
   full: boolean;
-  collapsed: Set<string>;
+  collapsed: Map<string, boolean>;
   isSearching: boolean;
-  onToggleCollapse(id: string): void;
+  isRemote: boolean;
+  onToggleCollapse(id: string, currentlyCollapsed: boolean): void;
   onToggleScope(name: string): void;
   onSwitch?(name: string): void;
   onMenu?(branch: BranchInfo, x: number, y: number, returnFocus: HTMLElement): void;
@@ -146,13 +159,19 @@ function BranchTreeNodes({
     <>
       {nodes.map((node) => {
         if (node.kind === 'folder') {
-          const isCollapsed = !isSearching && collapsed.has(node.id);
+          const hasSelected = folderHasScope(node, scope);
+          const isCollapsed =
+            !isSearching &&
+            !hasSelected &&
+            (collapsed.has(node.id)
+              ? collapsed.get(node.id)!
+              : isRemote && depth >= 1);
           return (
             <div key={node.id} className="branch-folder-item">
               <div
                 className="branch-tree-row folder-row"
                 style={{ paddingLeft: `${depth * 14 + 6}px` }}
-                onClick={() => onToggleCollapse(node.id)}
+                onClick={() => onToggleCollapse(node.id, isCollapsed)}
               >
                 <span className="folder-chevron">{isCollapsed ? <ChevronRight /> : <ChevronDown />}</span>
                 <span className="folder-icon"><FolderIcon /></span>
@@ -166,6 +185,7 @@ function BranchTreeNodes({
                   full={full}
                   collapsed={collapsed}
                   isSearching={isSearching}
+                  isRemote={isRemote}
                   onToggleCollapse={onToggleCollapse}
                   onToggleScope={onToggleScope}
                   onSwitch={onSwitch}
@@ -236,7 +256,7 @@ export function BranchList({
   onSwitch?(name: string): void;
 }) {
   const [filter, setFilter] = useState('');
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [collapsed, setCollapsed] = useState<Map<string, boolean>>(() => new Map());
 
   const full = scope.length >= maxScope;
   const current = branches.find((b) => b.current);
@@ -264,16 +284,18 @@ export function BranchList({
   const filteredLocal = useMemo(() => (isSearching ? filterTree(localTree, needle) : localTree), [localTree, needle, isSearching]);
   const filteredRemote = useMemo(() => (isSearching ? filterTree(remoteTree, needle) : remoteTree), [remoteTree, needle, isSearching]);
 
-  const toggleCollapse = (id: string) => {
+  const toggleCollapse = (id: string, currentlyCollapsed: boolean) => {
     setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const next = new Map(prev);
+      next.set(id, !currentlyCollapsed);
       return next;
     });
   };
 
   const hasRemote = branches.some((b) => b.remote);
+
+  const isLocalSectionCollapsed = !isSearching && (collapsed.has('section:local') ? collapsed.get('section:local')! : false);
+  const isRemoteSectionCollapsed = !isSearching && (collapsed.has('section:remote') ? collapsed.get('section:remote')! : false);
 
   return (
     <aside className="branches" aria-label="Branches">
@@ -307,15 +329,15 @@ export function BranchList({
         <div className="branch-section">
           <div
             className="branch-section-header"
-            onClick={() => toggleCollapse('section:local')}
+            onClick={() => toggleCollapse('section:local', isLocalSectionCollapsed)}
           >
             <BranchIcon />
             <span>Branches</span>
             <span className="section-chevron">
-              {collapsed.has('section:local') && !isSearching ? <ChevronRight /> : <ChevronDown />}
+              {isLocalSectionCollapsed ? <ChevronRight /> : <ChevronDown />}
             </span>
           </div>
-          {(!collapsed.has('section:local') || isSearching) && (
+          {!isLocalSectionCollapsed && (
             <div className="branch-section-body">
               {filteredLocal.length > 0 ? (
                 <BranchTreeNodes
@@ -325,6 +347,7 @@ export function BranchList({
                   full={full}
                   collapsed={collapsed}
                   isSearching={isSearching}
+                  isRemote={false}
                   onToggleCollapse={toggleCollapse}
                   onToggleScope={onToggle}
                   onSwitch={onSwitch}
@@ -344,15 +367,15 @@ export function BranchList({
           <div className="branch-section">
             <div
               className="branch-section-header"
-              onClick={() => toggleCollapse('section:remote')}
+              onClick={() => toggleCollapse('section:remote', isRemoteSectionCollapsed)}
             >
               <CloudIcon />
               <span>Remotes</span>
               <span className="section-chevron">
-                {collapsed.has('section:remote') && !isSearching ? <ChevronRight /> : <ChevronDown />}
+                {isRemoteSectionCollapsed ? <ChevronRight /> : <ChevronDown />}
               </span>
             </div>
-            {(!collapsed.has('section:remote') || isSearching) && (
+            {!isRemoteSectionCollapsed && (
               <div className="branch-section-body">
                 {filteredRemote.length > 0 ? (
                   <BranchTreeNodes
@@ -362,6 +385,7 @@ export function BranchList({
                     full={full}
                     collapsed={collapsed}
                     isSearching={isSearching}
+                    isRemote={true}
                     onToggleCollapse={toggleCollapse}
                     onToggleScope={onToggle}
                     onSwitch={onSwitch}

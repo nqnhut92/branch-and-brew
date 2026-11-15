@@ -86,12 +86,17 @@ export async function act<T>(
   const isTest = deps.extensionMode === vscode.ExtensionMode.Test;
   const showProgress = (forceProgress || !isTest) && vscode.workspace.getConfiguration('branchAndBrew').get('showBrewingProgress', true);
 
+  const logPanel = LogPanel.forRepo(repo);
   let brewingPanel: BrewingPanel | undefined;
   if (showProgress && commandStr) {
-    try {
-      brewingPanel = BrewingPanel.open(deps, repo, progressTitle, commandStr);
-    } catch {
-      // Ignored if webview cannot be opened
+    if (logPanel) {
+      logPanel.startBrewing(progressTitle, commandStr);
+    } else {
+      try {
+        brewingPanel = BrewingPanel.open(deps, repo, progressTitle, commandStr);
+      } catch {
+        // Ignored if webview cannot be opened
+      }
     }
   }
 
@@ -99,14 +104,26 @@ export async function act<T>(
   try {
     const result = await action({
       onOutput: (chunk) => {
-        brewingPanel?.appendOutput(chunk);
+        if (logPanel) {
+          logPanel.appendBrewingOutput(chunk);
+        } else {
+          brewingPanel?.appendOutput(chunk);
+        }
       },
     });
-    brewingPanel?.finish('success');
+    if (logPanel) {
+      logPanel.finishBrewing('success');
+    } else {
+      brewingPanel?.finish('success');
+    }
     return result;
   } catch (e) {
     const errorMsg = (e as Error).message;
-    brewingPanel?.finish('error', 1, errorMsg);
+    if (logPanel) {
+      logPanel.finishBrewing('error', errorMsg);
+    } else {
+      brewingPanel?.finish('error', 1, errorMsg);
+    }
     void vscode.window.showErrorMessage(`${name(repo)}: ${errorMsg}`);
     return undefined;
   } finally {

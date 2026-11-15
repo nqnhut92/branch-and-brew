@@ -23,16 +23,10 @@ export function onlyCurrent(branches: readonly BranchInfo[]): string[] {
 }
 
 /**
- * What the log shows before the user picks anything: the current branch (HEAD when detached), its
- * upstream, and the main branch.
+ * What the log shows before the user picks anything: only the current branch (HEAD when detached).
  */
 export function defaultScope(branches: readonly BranchInfo[]): string[] {
-  const current = branches.find((b) => b.current);
-  const scope = onlyCurrent(branches);
-  const add = (name?: string) => { if (name && !scope.includes(name) && branches.some((b) => b.name === name)) scope.push(name); };
-  add(current?.upstream);
-  add(mainBranch(branches)?.name);
-  return scope;
+  return onlyCurrent(branches);
 }
 
 /** Adds or removes a branch; refuses to go past MAX_SCOPE or to empty the scope. */

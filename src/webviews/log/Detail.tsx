@@ -3,6 +3,7 @@ import { isStaged, isUnstaged } from '../../core/git/changeState';
 import type { CommitDetail, FileAction, WorkingChange } from '../../shared/protocol';
 import { isMenuKey } from '../ui/ContextMenu';
 import { changeLetters, formatFullDate, formatPerson } from './format';
+import { Sash, useDragResize } from '../ui/Sash';
 
 export interface FileRow {
   path: string;
@@ -61,6 +62,7 @@ export function CommitDetailView({
   onFile: OnFile;
   onMenu: OnFileMenu;
 }) {
+  const [infoWidth, onResizeInfo] = useDragResize(480, 'bnb.log.infoWidth', 200, 1200, false);
   const files = detail.files.map((f): FileRow => ({ path: f.path, oldPath: f.oldPath, letters: f.status }));
   const lines = detail.message.split('\n');
   const subject = lines[0] ?? '';
@@ -70,7 +72,7 @@ export function CommitDetailView({
 
   return (
     <section className="detail">
-      <div className="info">
+      <div className="info" style={{ width: `${infoWidth}px` }}>
         <div className="commit-header">
           <div className="commit-avatar" title={detail.author}>{initial}</div>
           <div className="commit-subject">{subject}</div>
@@ -116,6 +118,7 @@ export function CommitDetailView({
         </dl>
         {body && <pre className="body">{body}</pre>}
       </div>
+      <Sash orientation="vertical" onMouseDown={(e) => onResizeInfo(e, 'vertical')} title="Drag to resize commit info and files" />
       <div className="changed">
         <h2>{files.length} changed {files.length === 1 ? 'file' : 'files'}{detail.parents.length > 1 ? ' (against the first parent)' : ''}</h2>
         <FileList files={files} onFile={onFile} onMenu={onMenu} />
