@@ -17,12 +17,14 @@ export function cloneTarget(url: string, parent: string): string {
 /**
  * `git clone <url> <parent>/<name>`; resolves with the new repository's folder. A clone that
  * fails or is cancelled takes its half-written folder with it, so the next try finds the way free.
+ * It skips the per-folder git queue: that queue is keyed by `parent`, and clones into one parent
+ * would otherwise run one after another.
  */
 export async function cloneRepo(url: string, parent: string, options?: RunOptions): Promise<string> {
   const target = cloneTarget(url, parent);
   const existed = existsSync(target);
   try {
-    await git(parent, ['clone', '--progress', '--', url, target], { timeoutMs: CLONE_TIMEOUT, ...options });
+    await git(parent, ['clone', '--progress', '--', url, target], { timeoutMs: CLONE_TIMEOUT, noQueue: true, ...options });
   } catch (e) {
     if (!existed) rmSync(target, { recursive: true, force: true });
     throw e;

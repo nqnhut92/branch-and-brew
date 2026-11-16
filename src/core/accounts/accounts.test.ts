@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -177,6 +177,32 @@ describe('clone progress', () => {
       expect(existsSync(path.join(parent, 'empty'))).toBe(true);
     } finally {
       removeTempDir(parent);
+    }
+  });
+});
+
+describe('parallel clones', () => {
+  // A stand-in for git that logs when it starts and ends, and waits in between. A shell script,
+  // so this runs where /bin/sh exists; Windows is covered by the integration test's ordering.
+  it.skipIf(process.platform === 'win32')('runs clones into one folder at the same time', async () => {
+    const source = await linearRepo();
+    const root = mkdtempSync(path.join(tmpdir(), 'bab parallel é-'));
+    try {
+      const names = ['one', 'two', 'three'];
+      for (const n of names) await source.git('clone', '--bare', '.', path.join(root, `${n}.git`));
+      const log = path.join(root, 'log');
+      const wrapper = path.join(root, 'slow git.sh');
+      writeFileSync(wrapper, `#!/bin/sh\necho start >> "${log}"\nsleep 0.5\ngit "$@"\nrc=$?\necho end >> "${log}"\nexit $rc\n`, { mode: 0o755 });
+      const parent = path.join(root, 'out');
+      mkdirSync(parent);
+      await Promise.all(names.map((n) => cloneRepo(path.join(root, `${n}.git`), parent, { gitPath: wrapper })));
+      const events = readFileSync(log, 'utf8').trim().split('\n');
+      // Run one after another it would read start,end,start,end,...; at once, all starts come first.
+      expect(events.slice(0, 3)).toEqual(['start', 'start', 'start']);
+      expect(existsSync(path.join(parent, 'three', '.git'))).toBe(true);
+    } finally {
+      source.dispose();
+      removeTempDir(root);
     }
   });
 });
