@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Added Marketplace metadata (`keywords`, `galleryBanner`, `homepage`, `bugs`) and UI preview screenshots to the README.
+
 ## 1.1.0
 
 - **Clone tab**: Browse and Clone is now a tab with a project-grouped, filterable list that holds thousands of repositories; tick several, choose the folder and group once, and clone them three at a time with a progress bar per repository, cancel and retry. The last folder is remembered.
