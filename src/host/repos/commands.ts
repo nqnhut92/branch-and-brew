@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { setIdentity, type IdentityProfile } from '../../core/git/identity';
@@ -593,13 +595,60 @@ export function registerRepoCommands(deps: Deps): vscode.Disposable[] {
       const repos = selected?.some((n) => n.kind === 'repo') ? selected.filter((n) => n.kind === 'repo').map((n) => n.path) : [await repoArg(deps, node)].filter((r): r is string => !!r);
       if (!repos.length) return;
       const what = repos.length === 1 ? `"${name(repos[0])}"` : `${repos.length} repositories`;
-      const ok = await vscode.window.showWarningMessage(
-        `Remove ${what} from the list? Nothing is deleted on disk.`, { modal: true }, 'Remove');
-      if (!ok) return;
-      await store.update((l) => repos.reduce((acc, r) => removeRepo(acc, r), l));
-      repos.forEach((r) => states.forget(r));
+      const answer = await vscode.window.showWarningMessage(
+        `Remove ${what} from the list?`, { modal: true, detail: 'Nothing is deleted on disk unless you choose to.' },
+        'Remove from List', 'Delete from Disk…');
+      if (!answer) return;
+      let gone = repos;
+      if (answer === 'Delete from Disk…') {
+        const deleted = await deleteFromDisk(repos);
+        if (!deleted) return;
+        gone = deleted;
+      }
+      await store.update((l) => gone.reduce((acc, r) => removeRepo(acc, r), l));
+      gone.forEach((r) => states.forget(r));
     }),
   ];
+}
+
+/** What would be lost with the folder: uncommitted changes and commits that exist nowhere else. */
+async function lossWarning(repo: string): Promise<string | undefined> {
+  const s = await getStatus(repo).catch(() => undefined);
+  if (!s) return undefined;
+  const parts = [s.changed ? `${s.changed} uncommitted change${s.changed === 1 ? '' : 's'}` : '', s.ahead ? `${s.ahead} unpushed commit${s.ahead === 1 ? '' : 's'}` : ''].filter(Boolean);
+  return parts.length ? `${name(repo)}: ${parts.join(', ')}` : undefined;
+}
+
+/**
+ * Asks once more, naming the folders and anything that would be lost, then deletes them.
+ * Resolves with the folders that are gone (a folder that cannot be deleted is reported and
+ * stays), or undefined when the user backed out.
+ */
+async function deleteFromDisk(repos: string[]): Promise<string[] | undefined> {
+  const warnings = (await Promise.all(repos.map(lossWarning))).filter((w): w is string => !!w);
+  const lines = [...repos.slice(0, 10), ...(repos.length > 10 ? [`… and ${repos.length - 10} more`] : [])];
+  const detail = [
+    'These folders are deleted permanently, with everything in them. This cannot be undone.', '', ...lines,
+    ...(warnings.length ? ['', 'Would be lost:', ...warnings] : []),
+  ].join('\n');
+  const ok = await vscode.window.showWarningMessage(
+    repos.length === 1 ? `Delete "${name(repos[0])}" from disk?` : `Delete ${repos.length} repositories from disk?`,
+    { modal: true, detail }, 'Delete');
+  if (!ok) return undefined;
+  const failed: string[] = [];
+  const gone: string[] = [];
+  await mapLimit(repos, 4, async (repo) => {
+    try {
+      // Never the root of a drive or a folder that is not a repository: it must hold .git.
+      if (path.dirname(repo) === repo || !existsSync(path.join(repo, '.git'))) throw new Error('not a repository folder');
+      await rm(repo, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      gone.push(repo);
+    } catch (e) {
+      failed.push(`${name(repo)}: ${(e as Error).message}`);
+    }
+  });
+  if (failed.length) void vscode.window.showErrorMessage(`Could not delete ${failed.join('; ')}`);
+  return gone;
 }
 
 async function askIdentity(name?: string, email?: string): Promise<{ name: string; email: string } | undefined> {
