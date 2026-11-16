@@ -59,7 +59,7 @@ A repository with a `pom.xml` has a **Maven** menu: Build (`clean install`), Bui
 
 The **Accounts** view connects GitHub and Azure DevOps through VS Code's own sign-in, and any other HTTPS host with a user name and a token (kept in VS Code's secret storage).
 
-- **Browse and Clone** lists an account's repositories with a filter; pick one, a folder and a group, and the clone is registered with the group's identity.
+- **Browse and Clone** opens a tab with the account's repositories (an Azure DevOps organization at a time), grouped by project, with a filter that takes words in any order. Tick any number (shift-click for a range, or a project's box), press Clone, answer the folder and group questions once, and each repository gets its own progress bar in a brewing dialog. Three clones run at a time; one can be cancelled, a failed one retried, and the tab stays open with its selection so the next batch is quick. Every clone is registered with the group's identity. A repository whose folder name is already in the list is marked "in list".
 - **Clone from URL** works for every host.
 - After that, fetch, pull and push on that host take their credentials from the account; no token is written to a clone's config or URL.
 - A token close to expiry is marked from 14 days before, where the host tells (GitHub) or from the date entered with the token.

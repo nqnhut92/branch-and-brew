@@ -1,8 +1,10 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { cloneRepo, cloneTarget } from '../../core/accounts/clone';
-import { hostOfUrl, type Account, type RemoteRepo } from '../../core/accounts/model';
+import { hostOfUrl, type Account } from '../../core/accounts/model';
 import { addPaths, type Deps } from '../repos/commands';
+import { ClonePanel } from './clonePanel';
+import { askDestination } from './destination';
 import type { Accounts } from './service';
 
 /**
@@ -24,31 +26,15 @@ export async function cloneInto(deps: Deps, url: string, parent: string, groupId
 }
 
 /** Asks where to clone and into which group, then clones. */
-async function cloneWithQuestions(deps: Deps, url: string): Promise<string | undefined> {
-  const folder = (await vscode.window.showOpenDialog({
-    canSelectFolders: true, canSelectFiles: false, openLabel: 'Clone into this folder', title: `Where to clone ${url}`,
-  }))?.[0];
-  if (!folder) return undefined;
-  const groups = deps.store.list.groups;
-  let groupId: string | undefined;
-  if (groups.length) {
-    const pick = await vscode.window.showQuickPick(
-      [{ label: 'Ungrouped', id: undefined as string | undefined }, ...groups.map((g) => ({
-        label: g.name, id: g.id as string | undefined,
-        description: deps.store.list.profiles.find((p) => p.id === g.profileId)?.label,
-      }))],
-      { title: 'Add to group', placeHolder: 'The group\'s identity profile is applied to the clone' });
-    if (!pick) return undefined;
-    groupId = pick.id;
-  }
-  const target = await cloneInto(deps, url, folder.fsPath, groupId);
+async function cloneWithQuestions(deps: Deps, memento: vscode.Memento, url: string): Promise<string | undefined> {
+  const destination = await askDestination(deps, memento, `Where to clone ${url}`);
+  if (!destination) return undefined;
+  const target = await cloneInto(deps, url, destination.folder, destination.groupId);
   void vscode.window.showInformationMessage(`Cloned into ${target}.`);
   return target;
 }
 
-const describeRepo = (r: RemoteRepo) => [r.private ? 'private' : '', r.updatedAt ? `pushed ${r.updatedAt.slice(0, 10)}` : ''].filter(Boolean).join(' · ');
-
-export function registerAccountCommands(deps: Deps, accounts: Accounts): vscode.Disposable[] {
+export function registerAccountCommands(deps: Deps, accounts: Accounts, memento: vscode.Memento): vscode.Disposable[] {
   const reg = (id: string, fn: (...args: never[]) => unknown) => vscode.commands.registerCommand(`branchAndBrew.${id}`, fn);
   const guard = <A extends unknown[]>(fn: (...args: A) => Promise<unknown>) => (...args: A) =>
     fn(...args).catch((e: Error) => void vscode.window.showErrorMessage(e.message));
@@ -95,13 +81,8 @@ export function registerAccountCommands(deps: Deps, accounts: Accounts): vscode.
         organization = organizations.length === 1 ? organizations[0] : await vscode.window.showQuickPick(organizations, { title: 'Azure DevOps organization' });
         if (!organization) return undefined;
       }
-      const repos = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Loading repositories of ${organization ?? account.label}` },
-        () => accounts.repos(account, organization));
-      const pick = await vscode.window.showQuickPick(
-        repos.map((r) => ({ label: r.name, description: describeRepo(r), detail: r.description, repo: r })),
-        { title: `Clone from ${organization ?? account.label} (${repos.length} repositories)`, placeHolder: 'Type to filter', matchOnDescription: true, matchOnDetail: true });
-      return pick ? cloneWithQuestions(deps, pick.repo.cloneUrl) : undefined;
+      ClonePanel.open(deps, accounts, memento, account, organization);
+      return undefined;
     })),
 
     reg('cloneUrl', guard(async () => {
@@ -110,7 +91,7 @@ export function registerAccountCommands(deps: Deps, accounts: Accounts): vscode.
         prompt: 'An account for the same host answers when git asks for credentials',
         validateInput: (v) => (!v.trim() || hostOfUrl(v.trim()) ? undefined : 'Enter an https or ssh URL'),
       });
-      return url?.trim() ? cloneWithQuestions(deps, url.trim()) : undefined;
+      return url?.trim() ? cloneWithQuestions(deps, memento, url.trim()) : undefined;
     })),
 
     reg('removeAccount', guard(async (node?: Account) => {

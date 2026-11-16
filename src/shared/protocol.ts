@@ -310,3 +310,58 @@ export interface BrewingStatusEvent {
 export type BrewingHostToWebview = RpcResponse | BrewingOutputEvent | BrewingStatusEvent;
 export type BrewingWebviewToHost = RpcRequest;
 
+
+// ---- Clone panel ------------------------------------------------------------------------------
+
+import type { RemoteRepo } from '../core/accounts/model';
+
+export type { RemoteRepo };
+
+export interface CloneInit {
+  /** What the list belongs to: the organization, or the account label. */
+  source: string;
+}
+
+export interface CloneList {
+  repos: RemoteRepo[];
+  /** Lower-case folder names of the repositories already registered, to mark a likely clone. */
+  registered: string[];
+}
+
+export type CloneStatus = 'queued' | 'cloning' | 'done' | 'error' | 'cancelled';
+
+export interface CloneStartResult {
+  /** False when the user dismissed the folder or group question. */
+  started: boolean;
+  destination?: string;
+  group?: string;
+}
+
+export interface CloneMethods {
+  init: { params: null; result: CloneInit };
+  /** The repositories; slow on a large organization, so it is asked for apart from `init`. */
+  load: { params: { refresh: boolean }; result: CloneList };
+  /** Asks for a folder and a group, then clones `urls`; progress comes back as `item` events. */
+  start: { params: { urls: string[] }; result: CloneStartResult };
+  /** Clones `urls` again into the folder and group of the last start. */
+  retry: { params: { urls: string[] }; result: void };
+  /** Stops one clone, or every clone that has not finished. */
+  cancel: { params: { url?: string }; result: void };
+}
+
+export interface CloneItemEvent {
+  kind: 'event';
+  event: 'item';
+  url: string;
+  status: CloneStatus;
+  /** Share of the whole clone, 0 to 100. */
+  percent?: number;
+  /** What git is doing right now. */
+  phase?: string;
+  error?: string;
+  /** Where the clone landed, once done. */
+  folder?: string;
+}
+
+export type CloneHostToWebview = RpcResponse | CloneItemEvent;
+export type CloneWebviewToHost = RpcRequest;

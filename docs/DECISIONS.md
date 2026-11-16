@@ -138,6 +138,11 @@ Choices that are not obvious from the code, with the reasoning. Grouped by area.
 - For a GitHub or Microsoft account the token is read with `getSession(..., { silent: true })` at that moment; if VS Code would need the user to sign in again, the prompt goes to the input box.
 - Azure DevOps: Microsoft documents an Entra token for git as `git -c http.extraheader="AUTHORIZATION: bearer …"`. Here it is given as the password, the way Git Credential Manager's OAuth mode does.
 - Token expiry: GitHub reports it in the `github-authentication-token-expiration` header for tokens that expire; it is read when an account is added, and the parser accepts only the `YYYY-MM-DD HH:MM:SS UTC` form. A generic host cannot tell, so the date can be typed when adding the token. Azure DevOps exposes expiry only for personal access tokens through an organization-level API, which is not used. The Accounts view warns from 14 days before.
+- The clone tab replaced the Browse and Clone quick pick: a quick pick of 12,000 repositories cannot take several picks, a progress view or a second batch. The list is virtualized (fixed 26 px rows), grouped by the project part of `Project/name`, and kept for the session per account and organization (Refresh fetches again). It is not stored on disk: the list can be large and goes stale.
+- Clones run three at a time, the same limit as Pull all, which keeps well under the hosts' request limits. A failed or cancelled clone deletes its half-written folder (only when git created it), or the retry would stop on "already exists".
+- Two selected repositories with the same folder name (`ProjectA/api`, `ProjectB/api`) would share a folder, so the later one is reported as failed instead of racing the first.
+- "in list" compares folder names only. Reading each registered repository's remote URL to be exact would cost one git call per repository on every load.
+- Delete from Disk only deletes folders that contain `.git`, never a drive root, and names uncommitted changes and unpushed commits before it asks; a folder that cannot be deleted stays in the list.
 
 ## Testing and CI
 

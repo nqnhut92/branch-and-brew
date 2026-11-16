@@ -1,0 +1,52 @@
+.clone { display: flex; flex-direction: column; height: 100%; }
+.clone-bar-top {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+.clone-bar-top input[type='search'] { flex: 1; min-width: 160px; }
+.clone-count { color: var(--vscode-descriptionForeground); white-space: nowrap; }
+.clone-go {
+  color: var(--vscode-button-foreground); background: var(--vscode-button-background); white-space: nowrap;
+}
+.clone-go:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+.clone-empty { padding: 24px 16px; color: var(--vscode-descriptionForeground); }
+.clone-failed { color: var(--vscode-errorForeground); }
+
+.clone-list { flex: 1; overflow-y: auto; position: relative; }
+.clone-project, .clone-repo {
+  position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; white-space: nowrap; overflow: hidden;
+}
+.clone-project { background: var(--vscode-sideBarSectionHeader-background, transparent); font-weight: 600; }
+.clone-project-count { color: var(--vscode-descriptionForeground); font-weight: normal; }
+.clone-twist { padding: 0 4px; border: none; background: none; color: inherit; line-height: 1; }
+.clone-repo { padding-left: 36px; cursor: pointer; }
+.clone-repo:hover { background: var(--vscode-list-hoverBackground); }
+.clone-repo.selected { background: var(--vscode-list-inactiveSelectionBackground); }
+.clone-repo input, .clone-project input { margin: 0; }
+.clone-desc { color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; }
+.clone-badge, .clone-private {
+  margin-left: auto; padding: 0 6px; border-radius: 8px; font-size: 0.85em;
+  color: var(--vscode-badge-foreground); background: var(--vscode-badge-background);
+}
+.clone-private { margin-left: 0; color: var(--vscode-descriptionForeground); background: none; }
+.clone-badge + .clone-private { margin-left: 0; }
+
+.clone-window { width: 640px; }
+.clone-dest { margin-left: 8px; color: var(--vscode-descriptionForeground); overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
+.clone-overall > div, .clone-bar > div { height: 100%; background: var(--vscode-progressBar-background); transition: width 0.2s; }
+.clone-overall { height: 3px; background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.3)); }
+.clone-rows { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; flex: 1; min-height: 80px; }
+.clone-row {
+  display: grid; grid-template-columns: 20px 1fr auto 22px; align-items: center; column-gap: 8px;
+  padding: 4px 16px;
+}
+.clone-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clone-state { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+.clone-icon { text-align: center; }
+.clone-done .clone-icon { color: var(--vscode-testing-iconPassed, var(--vscode-charts-green)); }
+.clone-row.clone-error .clone-icon { color: var(--vscode-errorForeground); }
+.clone-x { padding: 0 6px; border: none; background: none; color: inherit; line-height: 1.2; }
+.clone-bar { grid-column: 2 / 4; height: 3px; margin-top: 3px; background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.3)); border-radius: 2px; overflow: hidden; }
+.clone-row > .clone-msg { grid-column: 2 / 5; color: var(--vscode-errorForeground); font-size: 0.9em; word-break: break-word; }
+.clone-note { color: var(--vscode-descriptionForeground); font-size: 0.9em; }

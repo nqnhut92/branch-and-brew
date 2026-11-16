@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { cloneInto, registerAccountCommands } from './accounts/commands';
+import type { Account } from '../core/accounts/model';
+import { ClonePanel } from './accounts/clonePanel';
 import { Accounts } from './accounts/service';
 import { ACCOUNTS_VIEW_ID, AccountsTreeProvider } from './accounts/view';
 import { startAskpassHost } from './askpassHost';
@@ -35,6 +37,8 @@ export interface TestApi {
   /** Opens the rebase table for the current branch onto `onto`; without it, the running rebase. */
   openRebase(repo: string, onto?: string): RebasePanel;
   accounts: Accounts;
+  /** Opens the clone tab of an account (and Azure DevOps organization). */
+  openClonePanel(account: Account, organization?: string): ClonePanel;
   /** Clones `url` into `<parent>/<name>`, registers it in the group and applies the group's profile. */
   cloneInto(url: string, parent: string, groupId?: string): Promise<string>;
   /** Extra environment for network git commands (tests switch off the machine's credential helpers). */
@@ -85,7 +89,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<TestAp
   context.subscriptions.push(
     store, states, tree, watcher, java, mavenStatus, accounts, accountsTree,
     vscode.window.createTreeView(ACCOUNTS_VIEW_ID, { treeDataProvider: accountsTree }),
-    ...registerAccountCommands(deps, accounts),
+    ...registerAccountCommands(deps, accounts, context.globalState),
     ...registerJavaCommands(deps, java, mavenStatus),
     mavenStatus.onDidChange((repo) => tree.redraw(repo)),
     java.onDidChange(() => tree.redraw()),
@@ -111,6 +115,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<TestAp
     resolveFile: (repo, file) => resolveFile(deps, repo, file),
     takeWhole: (repo, file, side) => takeWhole(deps, repo, file, side),
     accounts,
+    openClonePanel: (account, organization) => ClonePanel.open(deps, accounts, context.globalState, account, organization),
     cloneInto: (url, parent, groupId) => cloneInto(deps, url, parent, groupId),
     setGitEnv: (env) => { extraGitEnv = env; },
     java, mavenStatus,

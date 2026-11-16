@@ -174,3 +174,59 @@ suite('Accounts and clone (stub hosts)', () => {
     assert.strictEqual(await accounts.answer("Password for 'https://octo-nick@github.com': "), undefined);
   });
 });
+
+suite('Clone tab', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'bab clone tab é-'));
+  const fixtures: Fixture[] = [];
+
+  suiteTeardown(async () => {
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    const { store } = await api();
+    await store.update((l) => ({ ...l, repos: l.repos.filter((r) => !pathKey(r.path).startsWith(pathKey(root))) }));
+    fixtures.forEach((f) => f.dispose());
+    removeTempDir(root);
+  });
+
+  test('clones several repositories, reports each, registers the good ones and cleans up the failed one', async function () {
+    this.timeout(120_000);
+    const { openClonePanel, store } = await api();
+    const source = await linearRepo();
+    fixtures.push(source);
+    const served = path.join(root, 'served');
+    mkdirSync(path.join(served, 'other'), { recursive: true });
+    await source.git('clone', '--bare', '.', path.join(served, 'alpha repo.git'));
+    await source.git('clone', '--bare', '.', path.join(served, 'beta.git'));
+    await source.git('clone', '--bare', '.', path.join(served, 'other', 'beta.git'));
+    const [alpha, beta, clash, missing] = ['alpha repo.git', 'beta.git', 'other/beta.git', 'gone.git'].map((n) => path.join(served, n));
+    const parent = path.join(root, 'ü clones');
+    mkdirSync(parent);
+
+    const panel = openClonePanel({ id: 'clone-tab', kind: 'generic', host: 'example.invalid', label: 'Clone tab', username: 'nick' });
+    const last = new Map<string, string>();
+    const percents = new Map<string, number[]>();
+    panel.onDidItem((e) => {
+      last.set(e.url, e.status);
+      percents.set(e.url, [...(percents.get(e.url) ?? []), e.percent ?? 0]);
+    });
+    await panel.run([alpha, beta, clash, missing], { folder: parent });
+
+    assert.deepStrictEqual([alpha, beta, clash, missing].map((u) => last.get(u)), ['done', 'done', 'error', 'error']);
+    // The runner's git may check out CRLF (core.autocrlf), so compare without the line endings.
+    assert.strictEqual(readFileSync(path.join(parent, 'alpha repo', 'a.txt'), 'utf8').replace(/\r\n/g, '\n'), 'one\ntwo\n');
+    assert.ok(existsSync(path.join(parent, 'beta', '.git')));
+    assert.ok(!existsSync(path.join(parent, 'gone')), 'a failed clone leaves no folder behind');
+    assert.ok(percents.get(alpha)!.includes(100));
+    const registered = await until(() => {
+      const paths = store.list.repos.map((r) => pathKey(r.path));
+      return paths.includes(pathKey(path.join(parent, 'alpha repo'))) && paths.includes(pathKey(path.join(parent, 'beta')));
+    });
+    assert.ok(registered);
+
+    // A retry of the failed one into the same folder works once the source exists.
+    await source.git('clone', '--bare', '.', missing);
+    last.clear();
+    await panel.run([missing], { folder: parent });
+    assert.strictEqual(last.get(missing), 'done');
+    panel.dispose();
+  });
+});
