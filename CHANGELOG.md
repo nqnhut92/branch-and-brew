@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Replaced retired Shields.io Marketplace badge in `README.md`.
+
 ## 1.1.1
 
 - Added Marketplace metadata (`keywords`, `galleryBanner`, `homepage`, `bugs`) and UI preview screenshots to the README.

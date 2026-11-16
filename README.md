@@ -1,6 +1,6 @@
 # Branch and Brew
 
-[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/nqnhut92.branch-and-brew?label=VS%20Code%20Marketplace&color=0078d4)](https://marketplace.visualstudio.com/items?itemName=nqnhut92.branch-and-brew)
+[![Visual Studio Marketplace](https://vsmarketplacebadges.dev/version-short/nqnhut92.branch-and-brew.svg)](https://marketplace.visualstudio.com/items?itemName=nqnhut92.branch-and-brew)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A VS Code extension for developers who work across many Git repositories, with a Java/Maven toolchain built in.
