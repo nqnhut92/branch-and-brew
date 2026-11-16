@@ -45,3 +45,14 @@ function firstLine(s: string): string {
   const line = s.split('\n').map((l) => l.trim()).find((l) => /error|fatal/i.test(l)) ?? s.split('\n')[0] ?? '';
   return line.replace(/^(error|fatal):\s*/i, '').slice(0, 120);
 }
+
+/**
+ * `text` as a Markdown code span. Nothing inside a code span is escaped, so a backslash there
+ * shows as a backslash; the fence is made longer than any run of backticks in the text instead.
+ */
+export function markdownCode(text: string): string {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = '`'.repeat(longest + 1);
+  const pad = text.startsWith('`') || text.endsWith('`') ? ' ' : '';
+  return `${fence}${pad}${text}${pad}${fence}`;
+}

@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { checkIdentity } from '../../core/git/identity';
-import { describeStatus, rowState } from '../../core/repos/describe';
+import { describeStatus, markdownCode, rowState } from '../../core/repos/describe';
 import { pathKey, profileFor, reposInGroup, type Group, type RepoList } from '../../core/repos/model';
 import type { RepoStates } from './state';
 import type { RepoStore } from './store';
@@ -119,8 +119,8 @@ export class RepoTreeProvider implements vscode.TreeDataProvider<Node>, vscode.D
       return md;
     }
     if (status) {
-      md.appendMarkdown(`Branch: \`${escape(status.branch ?? 'detached')}\``);
-      if (status.upstream) md.appendMarkdown(` → \`${escape(status.upstream)}\``);
+      md.appendMarkdown(`Branch: ${markdownCode(status.branch ?? 'detached')}`);
+      if (status.upstream) md.appendMarkdown(` → ${markdownCode(status.upstream)}`);
       md.appendMarkdown('  \n');
     }
     if (identity) {

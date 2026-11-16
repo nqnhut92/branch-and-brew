@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepoStatus } from '../git/status';
-import { describeStatus, rowState, summarizePull } from './describe';
+import { describeStatus, markdownCode, rowState, summarizePull } from './describe';
 
 const base: RepoStatus = { branch: 'main', oid: 'abcdef1234', ahead: 0, behind: 0, changed: 0, conflicted: 0 };
 
@@ -32,5 +32,17 @@ describe('summarizePull', () => {
       { repo: '/r/c', result: 'failed', message: 'hint: something\nfatal: Could not read from remote repository.\nmore' },
     ], (r) => r.split('/').pop()!);
     expect(text).toBe('Pulled 1 of 3 repositories. Conflict: b. Failed: c (Could not read from remote repository.).');
+  });
+});
+
+describe('markdownCode', () => {
+  it('leaves hyphens, dots and slashes unescaped', () => {
+    expect(markdownCode('dev3/chronos/2890374/quest/new-jobs-added-metric')).toBe('`dev3/chronos/2890374/quest/new-jobs-added-metric`');
+    expect(markdownCode('release/1.2.(x)')).toBe('`release/1.2.(x)`');
+  });
+
+  it('uses a longer fence when the text holds backticks', () => {
+    expect(markdownCode('a`b')).toBe('``a`b``');
+    expect(markdownCode('`a')).toBe('`` `a ``');
   });
 });
