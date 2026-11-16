@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - **Clone tab**: Browse and Clone is now a tab with a project-grouped, filterable list that holds thousands of repositories; tick several, choose the folder and group once, and clone them three at a time with a progress bar per repository, cancel and retry. The last folder is remembered.
 - Remove from List can also delete the repositories from disk, after a second question that names anything that would be lost.
