@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { linearRepo, type Fixture } from '../../../test/fixtures/repos';
 import { removeTempDir } from '../../../test/fixtures/cleanup';
-import { cloneRepo, cloneTarget } from './clone';
+import { filterRepos, folderClashes, groupByProject, projectOf, shortNameOf } from './browse';
+import { cloneRepo, cloneTarget, lastMessage, parseCloneProgress } from './clone';
 import {
   getAzureProfile, getGitHubUser, listAzureOrganizations, listAzureRepos, listGitHubRepos, parseGitHubExpiry, type HttpGet,
 } from './hosts';
@@ -146,5 +147,72 @@ describe('cloneRepo', () => {
     writeFileSync(path.join(tmp, 'taken', 'file'), 'x');
     await expect(cloneRepo('https://example.invalid/a/taken.git', tmp)).rejects.toThrow(/already exists/);
     await expect(cloneRepo(source.dir, tmp)).rejects.toThrow(/already exists/);
+  });
+});
+
+describe('clone progress', () => {
+  it('reads the newest progress line, with carriage returns', () => {
+    expect(parseCloneProgress('Receiving objects:  10% (1/10)\rReceiving objects:  50% (5/10)\r')).toEqual({ phase: 'Receiving objects', percent: 40 });
+    expect(parseCloneProgress('remote: Counting objects: 100% (5/5), done.\n')).toEqual({ phase: 'Counting objects', percent: 0 });
+    expect(parseCloneProgress('Resolving deltas: 100% (3/3), done.\n')).toEqual({ phase: 'Resolving deltas', percent: 95 });
+    expect(parseCloneProgress('Updating files: 50% (1/2)\r\n')).toEqual({ phase: 'Updating files', percent: 98 });
+  });
+
+  it('ignores text that is not progress, and handles CRLF', () => {
+    expect(parseCloneProgress("Cloning into 'x'...\r\n")).toBeUndefined();
+    expect(parseCloneProgress('Receiving objects:  4')).toBeUndefined();
+    expect(lastMessage("Cloning into 'x'...\r\nReceiving objects: 10% (1/10)\r\nfatal: repository not found\r\n")).toBe('fatal: repository not found');
+  });
+
+  it('removes the folder of a clone that failed, but not one that was there', async () => {
+    const parent = mkdtempSync(path.join(tmpdir(), 'bab clone é-'));
+    try {
+      // Sources that exist but are not repositories, so git refuses them the same way everywhere.
+      mkdirSync(path.join(parent, 'src', 'no such repo'), { recursive: true });
+      await expect(cloneRepo(path.join(parent, 'src', 'no such repo'), parent)).rejects.toThrow();
+      expect(existsSync(path.join(parent, 'no such repo'))).toBe(false);
+      mkdirSync(path.join(parent, 'src', 'empty'));
+      mkdirSync(path.join(parent, 'empty'));
+      await expect(cloneRepo(path.join(parent, 'src', 'empty'), parent)).rejects.toThrow();
+      expect(existsSync(path.join(parent, 'empty'))).toBe(true);
+    } finally {
+      removeTempDir(parent);
+    }
+  });
+});
+
+describe('browse list', () => {
+  const repos = [
+    { name: 'Access Applause/Applause v2' }, { name: 'Access Applause/AccessApplause' },
+    { name: 'Access Architecture Team/Sample.Feature.Flags' }, { name: 'Zeta/api' },
+  ];
+
+  it('splits a name into project and repository', () => {
+    expect(projectOf(repos[0])).toBe('Access Applause');
+    expect(shortNameOf(repos[0])).toBe('Applause v2');
+    expect(projectOf({ name: 'lonely' })).toBe('');
+    expect(shortNameOf({ name: 'lonely' })).toBe('lonely');
+  });
+
+  it('filters on every word in any order and case', () => {
+    expect(filterRepos(repos, '').length).toBe(4);
+    expect(filterRepos(repos, 'applause V2').map((r) => r.name)).toEqual(['Access Applause/Applause v2']);
+    expect(filterRepos(repos, 'team/sample').length).toBe(1);
+    expect(filterRepos(repos, 'nothing')).toEqual([]);
+  });
+
+  it('groups by project in name order', () => {
+    expect(groupByProject(repos).map((g) => [g.project, g.repos.map(shortNameOf)])).toEqual([
+      ['Access Applause', ['AccessApplause', 'Applause v2']],
+      ['Access Architecture Team', ['Sample.Feature.Flags']],
+      ['Zeta', ['api']],
+    ]);
+  });
+
+  it('finds folder names that clash', () => {
+    const a = 'https://dev.azure.com/o/P1/_git/api';
+    const b = 'https://dev.azure.com/o/P2/_git/API';
+    const c = 'https://dev.azure.com/o/P2/_git/web';
+    expect([...folderClashes([a, b, c])]).toEqual([[b, a]]);
   });
 });
