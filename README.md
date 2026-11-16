@@ -1,5 +1,8 @@
 # Branch and Brew
 
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/nqnhut92.branch-and-brew?label=VS%20Code%20Marketplace&color=0078d4)](https://marketplace.visualstudio.com/items?itemName=nqnhut92.branch-and-brew)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A VS Code extension for developers who work across many Git repositories, with a Java/Maven toolchain built in.
 
 - **Repositories view**: many repositories in groups, with live status, bulk pull and per-group Git identity.
@@ -9,6 +12,17 @@ A VS Code extension for developers who work across many Git repositories, with a
 - **Java and Maven**: picks the JDK from `pom.xml`, downloads JDKs and Maven on request, and runs Maven from the context menu.
 - **Accounts**: GitHub, Azure DevOps or any HTTPS host, to browse and clone repositories.
 
+## Preview
+
+### Commit Log
+![Commit Log](docs/images/commit-log.png)
+
+### Interactive Rebase
+![Interactive Rebase](docs/images/interactive-rebase.png)
+
+### Three-Pane Merge
+![Three-Pane Merge](docs/images/three-pane-merge.png)
+
 ## Requirements
 
 - VS Code 1.90 or newer
@@ -16,7 +30,11 @@ A VS Code extension for developers who work across many Git repositories, with a
 
 ## Install
 
-Search for **Branch and Brew** in the Extensions view, or run `code --install-extension nqnhut92.branch-and-brew`. VS Code then keeps it up to date.
+Search for **Branch and Brew** in the Extensions view, install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=nqnhut92.branch-and-brew), or run:
+
+```sh
+code --install-extension nqnhut92.branch-and-brew
+```
 
 To build it yourself: `npm ci && npm run vsix`, then **Extensions: Install from VSIX...**.
 

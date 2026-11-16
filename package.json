@@ -10,6 +10,21 @@
     "type": "git",
     "url": "https://github.com/nqnhut92/branch-and-brew.git"
   },
+  "homepage": "https://github.com/nqnhut92/branch-and-brew#readme",
+  "bugs": {
+    "url": "https://github.com/nqnhut92/branch-and-brew/issues"
+  },
+  "keywords": [
+    "git",
+    "multi-repo",
+    "rebase",
+    "merge",
+    "maven"
+  ],
+  "galleryBanner": {
+    "color": "#1f1612",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
