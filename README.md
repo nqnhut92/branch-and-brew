@@ -16,7 +16,9 @@ A VS Code extension for developers who work across many Git repositories, with a
 
 ## Install
 
-Build a `.vsix` (`npm ci && npm run vsix`) and use **Extensions: Install from VSIX...**.
+Search for **Branch and Brew** in the Extensions view, or run `code --install-extension nqnhut92.branch-and-brew`. VS Code then keeps it up to date.
+
+To build it yourself: `npm ci && npm run vsix`, then **Extensions: Install from VSIX...**.
 
 ## Documentation
 
