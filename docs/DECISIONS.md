@@ -145,6 +145,12 @@ Choices that are not obvious from the code, with the reasoning. Grouped by area.
 - "in list" compares folder names only. Reading each registered repository's remote URL to be exact would cost one git call per repository on every load.
 - Delete from Disk only deletes folders that contain `.git`, never a drive root, and names uncommitted changes and unpushed commits before it asks; a folder that cannot be deleted stays in the list.
 
+## Releases
+
+- The Marketplace is the update channel: VS Code updates Marketplace extensions by itself and never a local `.vsix`. A self-updating extension was considered and not built: it would be code to write, test and keep, and a second way to install.
+- Publishing uses Trusted Publishing (`vsce publish --oidc` from GitHub Actions) instead of a personal access token. Microsoft retires global Azure DevOps tokens on 2026-12-01 and marks the token route not recommended, and with OIDC there is no secret in the repository and no Azure DevOps organization.
+- The publish workflow does not run the integration tests: the tagged commit has already passed the full CI on all three systems, and a release should not wait on three more runs. It does run lint, typecheck and unit tests, which take seconds.
+
 ## Testing and CI
 
 - Integration tests that need a webview to draw wait on what it reports, never on frames (see Webviews).

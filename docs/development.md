@@ -47,4 +47,14 @@ Not covered by tests, because they need a human, a browser or a real account: th
 - On Windows the workspace and temp folder are excluded from Defender, which speeds up `npm ci` and the tests.
 - Run `npm run lint && npm run typecheck && npm test && npm run test:integration` locally before pushing for quick feedback; CI is the check on all three OSes.
 
+## Release
+
+A release is a version tag; nothing else publishes. `.github/workflows/publish.yml` runs on a pushed `v*` tag, checks that the tag equals the version in `package.json`, runs lint, typecheck and unit tests, packages the `.vsix`, publishes it to the Visual Studio Marketplace and creates the GitHub release with the `.vsix` and the CHANGELOG section as notes.
+
+1. Make sure CI is green on the commit to release.
+2. `npm version <x.y.z> --no-git-tag-version`, rename `Unreleased` to the version in `CHANGELOG.md`, commit and push to `main`.
+3. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+Installed extensions then update themselves through VS Code. The publisher `nqnhut92` (Marketplace management page) has a Trusted Publishing policy for this repository and the file name `publish.yml`; renaming the workflow file or the repository breaks the login until the policy is changed.
+
 If the repository ever goes private again, minutes count against the Free plan's 2,000 a month (a Windows minute counts double, a macOS minute ten times) and this layout would use them up quickly: run Linux and Windows per push, and macOS weekly or by hand.
