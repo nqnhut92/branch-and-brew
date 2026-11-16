@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { createRoot } from 'react-dom/client';
 import { filterRepos, groupByProject, shortNameOf } from '../../core/accounts/browse';
 import { folderNameOf } from '../../core/accounts/model';
-import type { CloneInit, CloneItemEvent, CloneMethods, RemoteRepo } from '../../shared/protocol';
+import type { CloneInit, CloneItemEvent, CloneMethods, CloneRegisteredEvent, RemoteRepo } from '../../shared/protocol';
 import { createClient, onHostEvent, vscodeApi } from '../ui/rpc';
 import { CloneProgressDialog, type CloneItem } from './ProgressDialog';
 import '../ui/base.css';
@@ -53,6 +53,7 @@ function App() {
   }, [load]);
 
   useEffect(() => onHostEvent((raw) => {
+    if (raw.event === 'registered') return setRegistered(new Set((raw as unknown as CloneRegisteredEvent).registered));
     const e = raw as unknown as CloneItemEvent;
     if (e.event !== 'item') return;
     setItems((prev) => {
@@ -65,7 +66,6 @@ function App() {
       return next;
     });
     if (e.status === 'done') {
-      setRegistered((prev) => new Set(prev).add(folderNameOf(e.url).toLowerCase()));
       setSelected((prev) => { const next = new Set(prev); next.delete(e.url); return next; });
     }
   }), []);

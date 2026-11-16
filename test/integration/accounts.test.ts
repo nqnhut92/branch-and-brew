@@ -222,6 +222,13 @@ suite('Clone tab', () => {
     });
     assert.ok(registered);
 
+    // "In list" follows the list: removing a repository tells the open tab at once.
+    const seen: string[][] = [];
+    panel.onDidRegisteredChange((names) => seen.push(names));
+    await store.update((l) => ({ ...l, repos: l.repos.filter((r) => pathKey(r.path) !== pathKey(path.join(parent, 'beta'))) }));
+    await until(() => seen.length > 0);
+    assert.ok(seen[0].includes('alpha repo') && !seen[0].includes('beta'), `after the removal: ${seen[0].join(', ')}`);
+
     // A retry of the failed one into the same folder works once the source exists.
     await source.git('clone', '--bare', '.', missing);
     last.clear();

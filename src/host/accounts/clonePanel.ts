@@ -6,7 +6,7 @@ import { folderNameOf, type Account, type RemoteRepo } from '../../core/accounts
 import { GitCancelledError } from '../../core/git/runner';
 import { mapLimit } from '../../core/repos/pool';
 import type {
-  CloneHostToWebview, CloneInit, CloneItemEvent, CloneList, CloneMethods, CloneStartResult, CloneWebviewToHost, RpcResponse,
+  CloneHostToWebview, CloneInit, CloneItemEvent, CloneList, CloneRegisteredEvent, CloneMethods, CloneStartResult, CloneWebviewToHost, RpcResponse,
 } from '../../shared/protocol';
 import { addPaths, type Deps } from '../repos/commands';
 import { renderWebview, webviewOptions } from '../panels/webviewHtml';
@@ -45,6 +45,10 @@ export class ClonePanel implements vscode.Disposable {
   private readonly itemEmitter = new vscode.EventEmitter<CloneItemEvent>();
   /** Every progress event the panel sends to its page; the integration tests listen here. */
   readonly onDidItem = this.itemEmitter.event;
+  private readonly registeredEmitter = new vscode.EventEmitter<string[]>();
+  /** Fires with the registered folder names whenever they change; the tests listen here. */
+  readonly onDidRegisteredChange = this.registeredEmitter.event;
+  private registeredKey = '';
   private destination?: Destination;
   /** Lets a run stop its queue when the panel is closed. */
   private disposed = false;
@@ -61,12 +65,15 @@ export class ClonePanel implements vscode.Disposable {
     });
     this.subscriptions.push(
       this.panel.webview.onDidReceiveMessage((msg: CloneWebviewToHost) => void this.receive(msg)),
+      // A repository removed from the list, or added by a clone, changes what "in list" means.
+      deps.store.onDidChange(() => this.pushRegistered()),
       this.panel.onDidDispose(() => {
         this.disposed = true;
         ClonePanel.panels.delete(key);
         for (const c of this.controllers.values()) c.abort();
         this.subscriptions.forEach((s) => s.dispose());
         this.itemEmitter.dispose();
+        this.registeredEmitter.dispose();
       }),
     );
     this.panel.webview.html = renderWebview(this.panel.webview, deps.extensionUri, {
@@ -114,7 +121,24 @@ export class ClonePanel implements vscode.Disposable {
       repos = await this.accounts.repos(this.account, this.organization);
       lists.set(key, repos);
     }
-    return { repos, registered: this.deps.store.list.repos.map((r) => path.basename(r.path).toLowerCase()) };
+    const registered = this.registeredNames();
+    this.registeredKey = registered.join('\n');
+    return { repos, registered };
+  }
+
+  private registeredNames(): string[] {
+    return this.deps.store.list.repos.map((r) => path.basename(r.path).toLowerCase());
+  }
+
+  /** Tells the page which folder names are registered now, when that differs from what it was last told. */
+  private pushRegistered(): void {
+    if (this.disposed) return;
+    const registered = this.registeredNames();
+    const key = registered.join('\n');
+    if (key === this.registeredKey) return;
+    this.registeredKey = key;
+    this.registeredEmitter.fire(registered);
+    void this.panel.webview.postMessage({ kind: 'event', event: 'registered', registered } satisfies CloneRegisteredEvent);
   }
 
   private async start(urls: string[]): Promise<CloneStartResult> {

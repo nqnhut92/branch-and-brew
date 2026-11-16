@@ -363,5 +363,12 @@ export interface CloneItemEvent {
   folder?: string;
 }
 
-export type CloneHostToWebview = RpcResponse | CloneItemEvent;
+/** The folder names of the registered repositories changed (one was removed, or a clone was added). */
+export interface CloneRegisteredEvent {
+  kind: 'event';
+  event: 'registered';
+  registered: string[];
+}
+
+export type CloneHostToWebview = RpcResponse | CloneItemEvent | CloneRegisteredEvent;
 export type CloneWebviewToHost = RpcRequest;
